@@ -8,8 +8,6 @@ export default function Login() {
 
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address");
@@ -20,42 +18,7 @@ export default function Login() {
       setError("Password must be at least 6 characters");
       return;
     }
-
-    setError("");
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/users/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.message === "Login successful") {
-        // Store user data
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("isLoggedIn", "true");
-
-        // Role-based redirect
-        if (data.user.role === "admin") {
-          navigate("/admin");
-        } else {
-          navigate("/dashboard");
-        }
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      console.log(err);
-      setError("Server error");
-    }
-  };
+    };
 
   return (
     <div className="min-h-screen flex">
@@ -160,7 +123,6 @@ export default function Login() {
               ← Back to Home
             </Link>
           </div>
-
           <p className="text-xs text-gray-400 text-center mt-4">
             By logging in, you agree to our Terms of Service and Privacy Policy
           </p>
@@ -168,4 +130,4 @@ export default function Login() {
       </div>
     </div>
   );
-}
+
