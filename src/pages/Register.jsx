@@ -18,45 +18,12 @@ export default function Register() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleRegister = async () => {
-    setError("");
 
-    // Password match validation
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/users/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: form.name,
-            email: form.email,
-            password: form.password,
-            role: form.role,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.message === "User registered successfully") {
-        alert("Registration Successful ✅");
-        navigate("/login");
-      } else {
-        setError(data.message);
-      }
-
-    } catch (err) {
-      console.log(err);
-      setError("Server error");
-    }
   };
 
   return (
@@ -174,4 +141,4 @@ export default function Register() {
       </div>
     </div>
   );
-}
+
