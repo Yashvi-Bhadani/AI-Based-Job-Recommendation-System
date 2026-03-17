@@ -1,48 +1,56 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import api from "../api/axios";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
   const handleLogin = async () => {
     setError("");
 
+    if (loading) return;
+
     if (!email || !password) {
       setError("Please fill in all fields");
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
     try {
-      const response = await fetch("http://localhost:5000/api/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      setLoading(true);
+      const response = await api.post("/api/users/login", { email, password });
+      const data = response.data;
 
-      const data = await response.json();
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("role", data.user.role);
+      localStorage.setItem("userName", data.user.name);
+      localStorage.setItem("userEmail", data.user.email);
+      localStorage.setItem("userId", data.user.id);
+      localStorage.setItem("token", data.token);
 
-      if (data.message === "Login successful") {
-        // Save to localStorage
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("role", data.user.role);
-        localStorage.setItem("userName", data.user.name);
-        localStorage.setItem("userEmail", data.user.email);
-
-        alert("Login successful!");
-        if (data.user.role === "admin") {
-          navigate("/admin");
-        } else {
-          navigate("/dashboard");
-        }
+      if (data.user.role === "admin") {
+        navigate("/admin");
       } else {
-        setError(data.message);
+        navigate("/dashboard");
       }
     } catch (err) {
-      setError("Failed to connect to server");
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Failed to connect to server");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,9 +135,10 @@ export default function Login() {
           {/* Login Button */}
           <button
             onClick={handleLogin}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-60"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
 
           {/* Register */}

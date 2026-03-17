@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export default function Register() {
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -20,9 +22,21 @@ export default function Register() {
 
   const handleRegister = async () => {
     setError("");
+    setSuccess("");
 
     if (!form.name || !form.email || !form.password || !form.role) {
       setError("Please fill in all fields");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (form.name.trim().length < 2) {
+      setError("Name must be at least 2 characters");
       return;
     }
 
@@ -31,28 +45,23 @@ export default function Register() {
       return;
     }
 
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
     try {
-      const response = await fetch("http://localhost:5000/api/users/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          password: form.password,
-          role: form.role,
-        }),
+      await api.post("/api/users/register", {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: form.role,
       });
 
-      const data = await response.json();
-
-      if (data.message === "User registered successfully") {
-        alert("Registration successful! Please login.");
-        navigate("/login");
-      } else {
-        setError(data.message);
-      }
+      setSuccess("Registration successful! Please login.");
+      setTimeout(() => navigate("/login"), 800);
     } catch (err) {
-      setError("Failed to connect to server");
+      setError(err.response?.data?.message || "Failed to connect to server");
     }
   };
 
@@ -143,11 +152,13 @@ export default function Register() {
           >
             <option value="">Select your role</option>
             <option value="student">Student</option>
-            <option value="admin">Admin</option>
           </select>
 
           {error && (
-            <p className="text-red-600 text-sm mb-3">{error}</p>
+            <p className="text-red-600 text-sm mb-2">{error}</p>
+          )}
+          {success && (
+            <p className="text-green-600 text-sm mb-2">{success}</p>
           )}
 
           <button
