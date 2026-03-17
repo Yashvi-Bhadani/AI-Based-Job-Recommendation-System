@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Software Requirements Specification - AI Job Matcher</title>
+    <style>
+        /* CSS variables for consistent theming */
+        :root {
+            --primary-color: #0f4c81; /* Classic Blue */
+            --secondary-color: #f7f9fc;
+            --accent-color: #e04b5a;
+            --text-color: #333333;
+            --text-light: #555555;
+            --border-color: #dddddd;
+            --font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        /* Essential print settings */
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        @media print {
+            .page-break { page-break-before: always; }
+            body { font-size: 11pt; color: #000; background: #fff; }
+            a { text-decoration: none; color: #000; }
+            h1, h2, h3 { page-break-after: avoid; }
+            p, ul, ol, table { page-break-inside: avoid; }
+            .cover-page {
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+        }
+
+        /* General Styling */
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--primary-color);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+        }
+
+        h1 { font-size: 2.5em; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        h2 { font-size: 1.8em; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        h3 { font-size: 1.4em; }
+
+        p, li { margin-bottom: 1em; color: var(--text-light); }
+        ul, ol { margin-left: 20px; }
+        
+        strong { color: var(--text-color); }
+
+        /* Cover Page Styling */
+        .cover-page {
+            text-align: center;
+            padding: 50px 20px;
+            margin-bottom: 50px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--secondary-color);
+        }
+
+        .cover-title {
+            font-size: 3em;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .cover-subtitle {
+            font-size: 1.5em;
+            color: var(--text-light);
+            margin-bottom: 40px;
+        }
+
+        .cover-details {
+            font-size: 1.2em;
+            text-align: left;
+            display: inline-block;
+            margin-top: 30px;
+        }
+        
+        .cover-details th {
+            text-align: right;
+            padding-right: 15px;
+            color: var(--primary-color);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) { background-color: var(--secondary-color); }
+
+        /* Container for content */
+        .content { max-width: 800px; margin: 0 auto; padding: 20px; }
+
+        /* Utility classes */
+        .highlight { background-color: #fff9e6; border-left: 4px solid #ffcc00; padding: 10px; margin: 20px 0; }
+        
+        /* Document Header/Footer styling (simulated for visual) */
+        .doc-header { text-align: right; font-size: 0.8em; color: #999; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 20px;}
+        </style>
+</head>
+<body>
+
+<div class="content">
+    
+    <!-- COVER PAGE -->
+    <div class="cover-page">
+        <h1 class="cover-title">Software Requirements<br>Specification</h1>
+        <div class="cover-subtitle">AI-Based Job Recommendation System<br>(AI Job Matcher)</div>
+        
+        <table class="cover-details" style="width: auto; margin: 40px auto; background: white;">
+            <tr><th>Version:</th><td>2.0 (Enterprise Architecture Review)</td></tr>
+            <tr><th>Date:</th><td>March 2026</td></tr>
+            <tr><th>Client:</th><td>Internal/Academic Demonstration</td></tr>
+            <tr><th>Prepared By:</th><td>AI Job Matcher Core Team</td></tr>
+        </table>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- TABLE OF CONTENTS (Static mapping for PDF presentation) -->
+    <h2>Table of Contents</h2>
+    <ul>
+        <li>1. Introduction
+            <ul>
+                <li>1.1 Purpose</li>
+                <li>1.2 Scope</li>
+                <li>1.3 Definitions, Acronyms, and Abbreviations</li>
+                <li>1.4 Project Team & Roles</li>
+            </ul>
+        </li>
+        <li>2. Overall Description
+            <ul>
+                <li>2.1 Product Perspective</li>
+                <li>2.2 Product Features</li>
+                <li>2.3 User Classes and Characteristics</li>
+                <li>2.4 Operating Environment</li>
+            </ul>
+        </li>
+        <li>3. System Features
+            <ul>
+                <li>3.1 Authentication & Security</li>
+                <li>3.2 AI Recommendation Engine</li>
+                <li>3.3 Application & Job Management</li>
+            </ul>
+        </li>
+        <li>4. Non-Functional Requirements
+            <ul>
+                <li>4.1 Performance Requirements</li>
+                <li>4.2 Security Requirements</li>
+                <li>4.3 Software Quality Attributes</li>
+            </ul>
+        </li>
+        <li>5. User Interfaces</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 1 -->
+    <h2>1. Introduction</h2>
+    
+    <h3>1.1 Purpose</h3>
+    <p>The purpose of this document is to detail the software requirements for the AI-Based Job Recommendation System (AI Job Matcher). It provides a comprehensive overview of the system's intended capabilities, features, and constraints. This document serves as a guideline for developers, testers, and stakeholders throughout the development lifecycle, moving from an initial prototype to a robust, enterprise-grade application structure.</p>
+
+    <h3>1.2 Scope</h3>
+    <p>The AI Job Matcher is a scalable web-based application designed to bridge the gap between job seekers and employers by leveraging advanced Artificial Intelligence. The system parses uploaded resumes, evaluates candidate skills and experience using Natural Language Processing (NLP) techniques, and recommends the most suitable job descriptions. It streamlines the recruitment process, substantially reducing manual reviewing time and increasing matching accuracy.</p>
+
+    <h3>1.3 Definitions, Acronyms, and Abbreviations</h3>
+    <table>
+        <tr><th>Term</th><th>Definition</th></tr>
+        <tr><td><strong>SRS</strong></td><td>Software Requirements Specification</td></tr>
+        <tr><td><strong>AI</strong></td><td>Artificial Intelligence</td></tr>
+        <tr><td><strong>NLP</strong></td><td>Natural Language Processing</td></tr>
+        <tr><td><strong>API</strong></td><td>Application Programming Interface</td></tr>
+        <tr><td><strong>JWT</strong></td><td>JSON Web Token (used for secure authentication)</td></tr>
+        <tr><td><strong>CORS</strong></td><td>Cross-Origin Resource Sharing</td></tr>
+    </table>
+
+    <h3>1.4 Project Team & Roles</h3>
+    <p>The project is developed collaboratively. Each member is assigned specific domain responsibilities to ensure a robust, parallel development workflow:</p>
+    
+    <ul>
+        <li>
+            <strong>24DIT009 (Manthan Chavda) - Backend Developer & Security</strong>
+            <ul>
+                <li><strong>Role:</strong> Lead Backend Developer and Security Analyst</li>
+                <li><strong>Responsibilities:</strong>
+                    <ul>
+                        <li>Developing the core RESTful APIs utilizing Express.js and Node.js.</li>
+                        <li>Implementing core backend business logic and routing mechanisms (jobs, resumes, applications, admin dashboard functionalities).</li>
+                        <li>Handling critical security measures: configuring CORS policies, managing environment variables, centralized error handling, input validation, and securing all API endpoints against common vulnerabilities.</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <br>
+        <li>
+            <strong>24DIT030 (Astha Makwana) - Database Administrator & Authentication</strong>
+            <ul>
+                <li><strong>Role:</strong> DBA and Identity Access Management (IAM) Specialist</li>
+                <li><strong>Responsibilities:</strong>
+                    <ul>
+                        <li>Designing and optimizing MongoDB schemas (User, Resume, Job, Application, ActivityLog schemas).</li>
+                        <li>Implementing secure User Login, Registration, and Password Reset workflows.</li>
+                        <li>Managing session integrity and authorization states utilizing JWT (JSON Web Tokens).</li>
+                        <li>Ensuring secure password hashing via Bcrypt to industry standards.</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <br>
+        <li>
+            <strong>24DIT004 (Yashvi Bhadani) - AI Integration Specialist</strong>
+            <ul>
+                <li><strong>Role:</strong> Core AI Feature Developer</li>
+                <li><strong>Responsibilities:</strong>
+                    <ul>
+                        <li>Developing and integrating the primary AI execution endpoints (`/api/ai`).</li>
+                        <li>Implementing intelligent logic for automated resume parsing, extracting key entities like skills, education, and experience timelines.</li>
+                        <li>Creating the dynamic recommendation engine algorithms to match extracted candidate profiles with optimal job postings based on composite scoring metrics.</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <br>
+        <li>
+            <strong>24DIT014 (Shivansh Dalvadi) - Frontend Developer</strong>
+            <ul>
+                <li><strong>Role:</strong> Lead Frontend Engineer</li>
+                <li><strong>Responsibilities:</strong>
+                    <ul>
+                        <li>Building the interactive, Single Page Application (SPA) user interface using React and Vite.</li>
+                        <li>Translating complex design wireframes into responsive, high-fidelity code utilizing the Tailwind CSS framework.</li>
+                        <li>Integrating frontend components and state management to consume backend REST APIs fluidly and maintain application state.</li>
+                        <li>Ensuring an intuitive, accessible, and high-performance user experience across desktop and mobile devices.</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 2 -->
+    <h2>2. Overall Description</h2>
+    
+    <h3>2.1 Product Perspective</h3>
+    <p>The AI Job Matcher operates as a distributed web application adopting a MERN-stack methodology (MongoDB, Express, React, Node.js). It consists of a React-based frontend client decoupled from a Node.js/Express.js backend server. The backend interfaces with a MongoDB database for scalable, persistent data storage and orchestrates calls to internal or external AI models to perform its core analytical recommendation tasks.</p>
+
+    <h3>2.2 Product Features</h3>
+    <ul>
+        <li><strong>User Management:</strong> Secure registration, authentication, and role-based access control (differentiating Admin, Job Seeker, and Employer capabilities).</li>
+        <li><strong>Intelligent Resume Parsing:</strong> Automated, AI-driven extraction of skills, experience, and educational background from raw PDF or document uploads.</li>
+        <li><strong>Job Lifecycle Management:</strong> Comprehensive tools for Employers to post, edit, pause, and manage job listings.</li>
+        <li><strong>AI Job Recommendation Engine:</strong> The proprietary system that intelligently correlates and matches job seekers with highly relevant job postings based on parsed contextual data, providing a percentage match score.</li>
+        <li><strong>Application Tracking Workflow:</strong> A seamless interface where users can track the real-time status of their applications, while employers manage received applicant pipelines.</li>
+        <li><strong>Admin Dashboard:</strong> A centralized control panel for overarching platform administration, user management, and system analytics.</li>
+    </ul>
+
+    <h3>2.3 User Classes and Characteristics</h3>
+    <ul>
+        <li><strong>Job Seekers:</strong> Users looking for employment. They have technical proficiency ranging from low to high. They expect an intuitive interface to upload their resumes and view parsed results effortlessly.</li>
+        <li><strong>Employers/Recruiters:</strong> Professional users who manage job postings and review AI-sorted candidate pipelines. Require rapid access to data and clear analytical matching scores.</li>
+        <li><strong>Administrators:</strong> Technical personnel managing system health, user roles, and configuring system-wide parameters (e.g., AI model thresholds).</li>
+    </ul>
+
+    <h3>2.4 Operating Environment</h3>
+    <ul>
+        <li><strong>Client/Frontend:</strong> Modern Web Browsers supporting HTML5 and ES6 JavaScript (Google Chrome 90+, Mozilla Firefox 88+, Safari 14+, MS Edge 90+).</li>
+        <li><strong>Server Processing:</strong> Node.js runtime environment (v18.x or newer).</li>
+        <li><strong>Database:</strong> MongoDB Atlas (Cloud) or localized MongoDB instances (v5.0+).</li>
+        <li><strong>Hosting Ecosystem:</strong> Cross-platform compatibility enabled via containerization (Docker) extending deployment to AWS, Azure, or standard VPS configurations running Linux.</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 3 -->
+    <h2>3. System Features Detailed Specification</h2>
+    
+    <h3>3.1 Authentication & Security (Managed by Astha & Manthan)</h3>
+    <p><strong>Description:</strong> Secure access protocols governing entry to the system through credential verification and robust session management.</p>
+    <ul>
+        <li><strong>Functional Requirements:</strong>
+            <ul>
+                <li>System shall allow users to securely register and authenticate via email and password combination.</li>
+                <li>System must encrypt user passwords upon creation utilizing bcrypt algorithm with a minimum salt round of 10.</li>
+                <li>Upon successful authentication, the system shall issue a JSON Web Token (JWT) with an encoded expiration timeframe to maintain a stateless session.</li>
+                <li>The server infrastructure shall employ stringent CORS policies mapped only to authorized frontend origins.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>3.2 AI Recommendation Engine (Managed by Yashvi)</h3>
+    <p><strong>Description:</strong> The core intelligent architectural module that ingests unformatted text and algorithmically bridges resumes to structured job requirements.</p>
+    <ul>
+        <li><strong>Functional Requirements:</strong>
+            <ul>
+                <li>The endpoint shall receive resume text or binary file streams and accurately extract predefined entities utilizing NLP pipelines.</li>
+                <li>The recommendation matrix shall score job postings individually against parsed resume profiles, yielding a quantifiable match percentage evaluating semantic similarity of requirements.</li>
+                <li>The module must present the top $N$ matching jobs to the user efficiently, ordered by relevance.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>3.3 Application & Job Management Workflow (Backend by Manthan, UI by Shivansh)</h3>
+    <p><strong>Description:</strong> The CRUD operational workflows handling the expansive lifecycle of job postings alongside candidate submittals.</p>
+    <ul>
+        <li><strong>Functional Requirements:</strong>
+            <ul>
+                <li>Authenticated Employers shall be granted access to create, read, update, and gracefully delete (or archive) job postings.</li>
+                <li>Authenticating Job seekers shall be empowered to execute application workflows against active job postings.</li>
+                <li>System architecture shall maintain atomic state updates corresponding to application progression (e.g., Pending, Under Review, Interviewing, Accepted, Rejected).</li>
+                <li>The User Interface shall dynamically render responsive dashboards uniquely tailored to the authenticated user's assigned role and active states.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 4 -->
+    <h2>4. Non-Functional Requirements</h2>
+    
+    <h3>4.1 Performance Requirements</h3>
+    <ul>
+        <li>Standard transactional API response times (CRUD operations excluding file parsing) should optimally resolve under <strong>300ms</strong> at the 95th percentile under normal load.</li>
+        <li>The AI parsing and matching process must operate asynchronously without blocking the main event Node loop, returning processing statuses or webhook triggers for long-running analyses exceeding 5000ms.</li>
+    </ul>
+
+    <h3>4.2 Security Requirements</h3>
+    <ul>
+        <li>Encryption in transit: All sensitive authentication and data payloads must be fundamentally transmitted over <strong>TLS/HTTPS</strong>.</li>
+        <li>Data hygiene: Database connection strings, cryptographic JWT secrets, and external API keys must be isolated securely utilizing environmental configuration techniques (`.env` variables) and never committed to source version control.</li>
+        <li>Passwords must inherently be salted and hashed at rest; they must never remain stored or logged in plain cryptographic text.</li>
+    </ul>
+
+    <h3>4.3 Software Quality Attributes</h3>
+    <ul>
+        <li><strong>Reliability:</strong> The backend architecture shall incorporate comprehensive centralized error handling middlewares to gracefully trap unhandled promise rejections or exceptions, mitigating hard internal server crashes.</li>
+        <li><strong>Maintainability:</strong> Codebases must adhere to modular, component-based scaling rules on both Frontend (React components) and Backend (isolated Route/Controller/Model paradigms) to ensure swift onboarding of progressive features.</li>
+    </ul>
+
+    <!-- SECTION 5 -->
+    <h2>5. User Interfaces & Interactions (Frontend by Shivansh)</h2>
+    <p>The User Experience language focuses on modern, sleek, and intuitive visual hierarchies engineered with Tailwind CSS constraints.</p>
+    <ul>
+        <li><strong>Role-Based Central Dashboards:</strong> Dedicated graphical views isolating operational concerns. Employers see posting metrics and raw applicant funnels; Job Seekers interact with match listings and application status timelines.</li>
+        <li><strong>Dynamic Job Feed:</strong> An engaging, elegantly paginated (or infinite-scroll capable) list presenting AI-matched job postings categorized by precision match scores alongside pertinent metadata tags.</li>
+        <li><strong>Profile Configuration Hub:</strong> A consolidated interface module reserved for defining granular user details, securely uploading resume attachments, and adjusting notification presets.</li>
+    </ul>
+    
+    <br><br><br>
+    <div style="text-align: center; color: #888; font-style: italic;">
+        *** End of Document ***
+    </div>
+
+</div>
+
+</body>
+</html>
