@@ -1,38 +1,71 @@
 import Navbar from "../components/Navbar";
-import { Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import api from "../api/axios";
 
 export default function UploadResume() {
-
-  // 🔐 PROTECT PAGE
-  if (localStorage.getItem("isLoggedIn") !== "true") {
-    return <Navigate to="/" replace />;
-  }
-
   const [selectedFile, setSelectedFile] = useState(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [resumes, setResumes] = useState([]);
 
-  const handleUpload = () => {
-    if (!selectedFile) {
-      alert("Please select a resume file");
+  const loadResumes = async () => {
+    try {
+      const res = await api.get("/api/resumes/my");
+      setResumes(res.data || []);
+    } catch {
+      // ignore for now, error shown only on upload
+    }
+  };
+
+  useEffect(() => {
+    loadResumes();
+  }, []);
+
+  const validateFile = (file) => {
+    if (!file) return "Please select a resume file";
+    const allowedExts = [".pdf", ".doc", ".docx"];
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!ext || !allowedExts.includes("." + ext)) {
+      return "Only PDF, DOC, DOCX files are allowed";
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return "File size must be under 5MB";
+    }
+    return "";
+  };
+
+  const handleUpload = async () => {
+    setError("");
+    setSuccess("");
+
+    const validationError = validateFile(selectedFile);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    // 🔹 GET EXISTING RESUMES
-    const resumes = JSON.parse(localStorage.getItem("resumes")) || [];
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("resume", selectedFile);
 
-    // 🔹 CREATE RESUME ENTRY
-    const newResume = {
-      name: selectedFile.name,
-      email: localStorage.getItem("email") || "student@email.com",
-      date: new Date().toLocaleDateString(),
-      status: "Active",
-    };
+      await api.post("/api/resumes/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-    resumes.push(newResume);
-    localStorage.setItem("resumes", JSON.stringify(resumes));
-
-    alert("Resume uploaded successfully");
-    setSelectedFile(null);
+      setSuccess("Resume uploaded successfully");
+      setSelectedFile(null);
+      await loadResumes();
+    } catch (err) {
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Failed to upload resume");
+      }
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -78,11 +111,19 @@ export default function UploadResume() {
               </p>
             )}
 
+            {error && (
+              <p className="text-sm text-red-600 mt-2">{error}</p>
+            )}
+            {success && (
+              <p className="text-sm text-green-600 mt-2">{success}</p>
+            )}
+
             <button
               onClick={handleUpload}
-              className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              disabled={uploading}
+              className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-60"
             >
-              Upload Resume
+              {uploading ? "Uploading..." : "Upload Resume"}
             </button>
           </div>
 
@@ -106,23 +147,25 @@ export default function UploadResume() {
         <div className="bg-white p-6 rounded-xl shadow mt-8">
           <h3 className="font-bold mb-4">Recent Uploads</h3>
 
-          {(JSON.parse(localStorage.getItem("resumes")) || []).map(
-            (file, i) => (
-              <div
-                key={i}
-                className="flex justify-between items-center bg-gray-50 p-4 rounded mb-3"
-              >
-                <div>
-                  <p className="font-medium">📄 {file.name}</p>
-                  <p className="text-sm text-gray-500">
-                    Uploaded on {file.date}
-                  </p>
-                </div>
-                <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">
-                  {file.status}
-                </span>
+          {resumes.map((file) => (
+            <div
+              key={file._id}
+              className="flex justify-between items-center bg-gray-50 p-4 rounded mb-3"
+            >
+              <div>
+                <p className="font-medium">📄 {file.originalName}</p>
+                <p className="text-sm text-gray-500">
+                  Uploaded on {new Date(file.createdAt).toLocaleDateString()}
+                </p>
               </div>
-            )
+              <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">
+                {file.status}
+              </span>
+            </div>
+          ))}
+
+          {!resumes.length && (
+            <p className="text-sm text-gray-500">No resumes uploaded yet.</p>
           )}
         </div>
       </main>
