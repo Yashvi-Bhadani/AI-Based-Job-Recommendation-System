@@ -1,103 +1,92 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import api from "../api/axios";
 
 export default function AdminDashboard() {
-  //  AUTH & ROLE CHECK
-  if (localStorage.getItem("isLoggedIn") !== "true") {
-    return <Navigate to="/" replace />;
-  }
-
-  if (localStorage.getItem("role") !== "admin") {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  /* ------------------ STATE ------------------ */
   const [jobs, setJobs] = useState([]);
   const [users, setUsers] = useState([]);
   const [resumes, setResumes] = useState([]);
+  const [stats, setStats] = useState({ totalUsers: 0, totalJobs: 0, totalResumes: 0, totalApplications: 0 });
+  const [jobForm, setJobForm] = useState({ title: "", company: "", location: "", type: "", salary: "", skills: "" });
+  const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
+  const [activityLogs, setActivityLogs] = useState([]);
 
-  const [jobForm, setJobForm] = useState({
-    title: "",
-    company: "",
-    location: "",
-    type: "",
-    salary: "",
-    skills: "",
-  });
+  const loadAll = async () => {
+    try {
+      const [statsRes, usersRes, jobsRes, resumesRes, activityRes] = await Promise.all([
+        api.get("/api/admin/stats"),
+        api.get("/api/admin/users"),
+        api.get("/api/jobs"),
+        api.get("/api/admin/resumes"),
+        api.get("/api/admin/activity"),
+      ]);
+      setStats(statsRes.data);
+      setUsers(usersRes.data || []);
+      setJobs(jobsRes.data || []);
+      setResumes(resumesRes.data || []);
+      setActivityLogs(activityRes.data || []);
+    } catch (err) {
+      console.error("Failed to load admin data", err);
+    }
+  };
 
-  /* ------------------ LOAD DATA ------------------ */
   useEffect(() => {
-    setJobs(JSON.parse(localStorage.getItem("jobs")) || []);
-    setUsers(JSON.parse(localStorage.getItem("users")) || []);
-    setResumes(JSON.parse(localStorage.getItem("resumes")) || []);
+    loadAll();
   }, []);
 
-  /* ------------------ JOB MANAGEMENT ------------------ */
-  const postJob = () => {
+  const postJob = async () => {
+    setFormError("");
+    setFormSuccess("");
     if (!jobForm.title || !jobForm.company) {
-      alert("Job title and company are required");
+      setFormError("Job title and company are required");
       return;
     }
-
-    const newJob = {
-      ...jobForm,
-      id: Date.now(),
-      skills: jobForm.skills.split(",").map((s) => s.trim()),
-      status: "Active",
-    };
-
-    const updatedJobs = [...jobs, newJob];
-    setJobs(updatedJobs);
-    localStorage.setItem("jobs", JSON.stringify(updatedJobs));
-
-    setJobForm({
-      title: "",
-      company: "",
-      location: "",
-      type: "",
-      salary: "",
-      skills: "",
-    });
+    try {
+      await api.post("/api/jobs", {
+        ...jobForm,
+        skills: jobForm.skills.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      setFormSuccess("Job posted successfully");
+      setJobForm({ title: "", company: "", location: "", type: "", salary: "", skills: "" });
+      await loadAll();
+    } catch (err) {
+      setFormError(err.response?.data?.message || "Failed to post job");
+    }
   };
 
-  const deleteJob = (id) => {
-    const updatedJobs = jobs.filter((j) => j.id !== id);
-    setJobs(updatedJobs);
-    localStorage.setItem("jobs", JSON.stringify(updatedJobs));
+  const deleteJob = async (id) => {
+    try {
+      await api.delete(`/api/jobs/${id}`);
+      await loadAll();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete job");
+    }
   };
 
-  /* ------------------ USER MANAGEMENT ------------------ */
-  const toggleUserStatus = (email) => {
-    const updatedUsers = users.map((u) =>
-      u.email === email
-        ? { ...u, blocked: !u.blocked }
-        : u
-    );
-    setUsers(updatedUsers);
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
+  const toggleUserStatus = async (id) => {
+    try {
+      await api.patch(`/api/admin/users/${id}/block`);
+      await loadAll();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update user");
+    }
   };
-
-  /* ------------------ ANALYTICS ------------------ */
-  const totalUsers = users.length;
-  const totalJobs = jobs.length;
-  const totalResumes = resumes.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       <main className="max-w-7xl mx-auto p-8">
-        {/* HEADER */}
         <h1 className="text-3xl font-bold mb-6">🛡️ Admin Dashboard</h1>
 
-        {/* ANALYTICS (FEATURE 6) */}
+        {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           {[
-            { label: "Total Users", value: totalUsers },
-            { label: "Total Jobs", value: totalJobs },
-            { label: "Resumes Uploaded", value: totalResumes },
-            { label: "Active Jobs", value: jobs.filter(j => j.status === "Active").length },
+            { label: "Total Users", value: stats.totalUsers },
+            { label: "Total Jobs", value: stats.totalJobs },
+            { label: "Resumes Uploaded", value: stats.totalResumes },
+            { label: "Total Applications", value: stats.totalApplications },
           ].map((stat, i) => (
             <div key={i} className="bg-white p-6 rounded-xl shadow">
               <p className="text-sm text-gray-500">{stat.label}</p>
@@ -106,26 +95,25 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/*  JOB MANAGEMENT */}
+        {/* JOB MANAGEMENT */}
         <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">💼 Job Management</h2>
 
           <div className="bg-white p-6 rounded-xl shadow mb-6">
             <div className="grid grid-cols-2 gap-4">
-              {["title", "company", "location", "type", "salary", "skills"].map(
-                (field) => (
-                  <input
-                    key={field}
-                    placeholder={field.toUpperCase()}
-                    value={jobForm[field]}
-                    onChange={(e) =>
-                      setJobForm({ ...jobForm, [field]: e.target.value })
-                    }
-                    className="border px-3 py-2 rounded"
-                  />
-                )
-              )}
+              {["title", "company", "location", "type", "salary", "skills"].map((field) => (
+                <input
+                  key={field}
+                  placeholder={field.toUpperCase()}
+                  value={jobForm[field]}
+                  onChange={(e) => setJobForm({ ...jobForm, [field]: e.target.value })}
+                  className="border px-3 py-2 rounded"
+                />
+              ))}
             </div>
+
+            {formError && <p className="text-red-600 text-sm mt-2">{formError}</p>}
+            {formSuccess && <p className="text-green-600 text-sm mt-2">{formSuccess}</p>}
 
             <button
               onClick={postJob}
@@ -136,73 +124,113 @@ export default function AdminDashboard() {
           </div>
 
           {jobs.map((job) => (
-            <div
-              key={job.id}
-              className="bg-white p-4 rounded-lg shadow mb-3 flex justify-between"
-            >
+            <div key={job._id} className="bg-white p-4 rounded-lg shadow mb-3 flex justify-between">
               <div>
                 <p className="font-semibold">{job.title}</p>
-                <p className="text-sm text-gray-500">
-                  {job.company} • {job.location}
-                </p>
+                <p className="text-sm text-gray-500">{job.company} • {job.location}</p>
               </div>
-              <button
-                onClick={() => deleteJob(job.id)}
-                className="text-red-600 text-sm"
-              >
+              <button onClick={() => deleteJob(job._id)} className="text-red-600 text-sm">
                 Delete
               </button>
             </div>
           ))}
+
+          {jobs.length === 0 && <p className="text-gray-500 text-sm">No jobs posted yet.</p>}
         </section>
 
-        {/*  USER MANAGEMENT */}
+        {/* USER MANAGEMENT */}
         <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">👥 User Management</h2>
 
-          {users.map((user, i) => (
-            <div
-              key={i}
-              className="bg-white p-4 rounded-lg shadow mb-3 flex justify-between"
-            >
+          {users.map((user) => (
+            <div key={user._id} className="bg-white p-4 rounded-lg shadow mb-3 flex justify-between">
               <div>
                 <p className="font-medium">{user.name}</p>
-                <p className="text-sm text-gray-500">
-                  {user.email} • {user.role}
-                </p>
+                <p className="text-sm text-gray-500">{user.email} • {user.role}</p>
               </div>
-
               <button
-                onClick={() => toggleUserStatus(user.email)}
-                className={`text-sm ${
-                  user.blocked ? "text-green-600" : "text-red-600"
-                }`}
+                onClick={() => toggleUserStatus(user._id)}
+                className={`text-sm ${user.isBlocked ? "text-green-600" : "text-red-600"}`}
               >
-                {user.blocked ? "Unblock" : "Block"}
+                {user.isBlocked ? "Unblock" : "Block"}
               </button>
+            </div>
+          ))}
+
+          {users.length === 0 && <p className="text-gray-500 text-sm">No users found.</p>}
+        </section>
+
+        {/* RESUME OVERSIGHT */}
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">📄 Resume Oversight</h2>
+
+          {resumes.length === 0 && <p className="text-gray-500">No resumes uploaded yet.</p>}
+
+          {resumes.map((res) => (
+            <div key={res._id} className="bg-white p-4 rounded-lg shadow mb-3">
+              <p className="font-medium">{res.originalName}</p>
+              <p className="text-sm text-gray-500">
+                {res.userId?.name} ({res.userId?.email}) • Uploaded on{" "}
+                {new Date(res.createdAt).toLocaleDateString()}
+              </p>
             </div>
           ))}
         </section>
 
-        {/*  RESUME OVERSIGHT */}
+        {/* ACTIVITY LOG */}
         <section>
-          <h2 className="text-xl font-semibold mb-4">📄 Resume Oversight</h2>
+          <h2 className="text-xl font-semibold mb-4">🕵️ User Activity Log</h2>
 
-          {resumes.length === 0 && (
-            <p className="text-gray-500">No resumes uploaded yet.</p>
+          {activityLogs.length === 0 && (
+            <p className="text-gray-500 text-sm">No activity recorded yet.</p>
           )}
 
-          {resumes.map((res, i) => (
-            <div
-              key={i}
-              className="bg-white p-4 rounded-lg shadow mb-3"
-            >
-              <p className="font-medium">{res.name}</p>
-              <p className="text-sm text-gray-500">
-                {res.email} • Uploaded on {res.date}
-              </p>
-            </div>
-          ))}
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            {activityLogs.length > 0 && (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500 text-left">
+                  <tr>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Role</th>
+                    <th className="px-4 py-3">Action</th>
+                    <th className="px-4 py-3">IP</th>
+                    <th className="px-4 py-3">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activityLogs.map((log) => (
+                    <tr key={log._id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{log.name}</td>
+                      <td className="px-4 py-3 text-gray-500">{log.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          log.role === "admin"
+                            ? "bg-purple-100 text-purple-700"
+                            : "bg-blue-100 text-blue-700"
+                        }`}>
+                          {log.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          log.action === "login"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-400">{log.ip}</td>
+                      <td className="px-4 py-3 text-gray-400">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </section>
       </main>
     </div>
