@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import api from "../api/axios";
 
 export default function Navbar() {
   const location = useLocation();
@@ -7,11 +8,22 @@ export default function Navbar() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [initials, setInitials] = useState("JD");
 
-  // 🔹 CHECK LOGIN STATE ON LOAD
   useEffect(() => {
-    setIsLoggedIn(localStorage.getItem("isLoggedIn") === "true");
-  }, []);
+    const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+    setIsLoggedIn(loggedIn);
+
+    const name = localStorage.getItem("userName") || "";
+    if (name) {
+      const parts = name.trim().split(" ");
+      const chars = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() || "");
+      const computed = chars.join("") || "JD";
+      setInitials(computed);
+    } else {
+      setInitials("JD");
+    }
+  }, [location.pathname]);
 
   const linkStyle = (path) =>
     location.pathname === path
@@ -75,15 +87,16 @@ export default function Navbar() {
                 onClick={() => setShowMenu(!showMenu)}
                 className="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer"
               >
-                JD
+                {initials}
               </div>
 
               {showMenu && (
                 <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg">
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                    onClick={() => {
-                      localStorage.removeItem("isLoggedIn");
+                    onClick={async () => {
+                      try { await api.post("/api/users/logout"); } catch {}
+                      localStorage.clear();
                       setIsLoggedIn(false);
                       setShowMenu(false);
                       navigate("/");
