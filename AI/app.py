@@ -1,17 +1,29 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
+import os
+import uuid
 from parser import parse_resume
-from model import predict_jobs
 
-app =FastAPI()
+app = FastAPI()
+
+UPLOAD_DIR = "../backend/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/parse")
-def parse_file(data:dict):
-    file_path=data['filePath']
+async def parse_resume_api(file: UploadFile = File(...)):
+    try:
+        # Use a unique name to avoid collisions
+        ext = os.path.splitext(file.filename)[-1] if file.filename else ".pdf"
+        safe_name = f"{uuid.uuid4().hex}{ext}"
+        file_path = os.path.join(UPLOAD_DIR, safe_name)
 
-    parsed_data=parse_resume(filePath)
-    recommendations=predict_jobs(parsed_data)
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
 
-    return {
-        "parsedData" : parsed_data,
-        "recommendations" : recommendations
-    }
+        print("File saved:", file_path)
+        parsed_data = parse_resume(file_path)
+
+        return {"parsedData": parsed_data}
+    except Exception as e:
+        print("PARSE ERROR:", str(e))
+        return {"error": str(e)}
