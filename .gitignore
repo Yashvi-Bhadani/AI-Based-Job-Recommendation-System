@@ -2,3 +2,6 @@ backend/.env
 *.mp4
 *.pdf
 *.pptx
+
+__pycache__/
+*.pyc
