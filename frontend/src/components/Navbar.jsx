@@ -52,21 +52,23 @@ export default function Navbar() {
           <Link to="/jobs" className={linkStyle("/jobs")}>
             Jobs
           </Link>
+          <Link to="/about" className={linkStyle("/about")}>
+            About Us
+          </Link>
         </nav>
       )}
 
       {/* RIGHT SECTION */}
       <div className="flex items-center gap-4">
-     
+
         {!isLoggedIn && (
           <>
-            <Link
-              to="/login"
-              className="text-sm text-gray-600 hover:text-blue-600"
-            >
+            <Link to="/about" className="text-sm text-gray-600 hover:text-blue-600">
+              About Us
+            </Link>
+            <Link to="/login" className="text-sm text-gray-600 hover:text-blue-600">
               Login
             </Link>
-
             <Link
               to="/register"
               className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700"
@@ -76,24 +78,38 @@ export default function Navbar() {
           </>
         )}
 
-      
         {isLoggedIn && (
           <>
             <span className="text-xl cursor-pointer">🔔</span>
 
-            {/* PROFILE */}
+            {/* PROFILE AVATAR + DROPDOWN */}
             <div className="relative">
               <div
                 onClick={() => setShowMenu(!showMenu)}
-                className="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer"
+                className="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer select-none"
               >
                 {initials}
               </div>
 
               {showMenu && (
-                <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg">
+                <div className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg z-50 overflow-hidden">
+                  <Link
+                    to="/profile"
+                    onClick={() => setShowMenu(false)}
+                    className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    👤 My Profile
+                  </Link>
+                  <Link
+                    to="/about"
+                    onClick={() => setShowMenu(false)}
+                    className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    ℹ️ About Us
+                  </Link>
+                  <div className="border-t my-1" />
                   <button
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
                     onClick={async () => {
                       try { await api.post("/api/users/logout"); } catch {}
                       localStorage.clear();
@@ -102,7 +118,7 @@ export default function Navbar() {
                       navigate("/");
                     }}
                   >
-                    Logout
+                    🚪 Logout
                   </button>
                 </div>
               )}
