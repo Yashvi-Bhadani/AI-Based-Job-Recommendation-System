@@ -136,6 +136,27 @@ def extract_experience(text: str) -> float:
 
 
 # ─── EDUCATION ─────────────────────────────────────────────────────────────────
+# def extract_education(text: str) -> list:
+#     degrees = [
+#         "b.tech", "m.tech", "btech", "mtech", "b.e", "m.e",
+#         "bachelor", "master", "phd", "ph.d", "mba", "bsc", "msc",
+#         "b.sc", "m.sc", "be", "me", "diploma", "10th", "12th",
+#         "hsc", "ssc", "intermediate", "matriculation"
+#     ]
+
+#     text_lower = text.lower()
+#     found = []
+
+#     lines = text.splitlines()
+#     for line in lines:
+#         line_lower = line.lower()
+#         if any(deg in line_lower for deg in degrees):
+#             found.append(deg)
+#             # clean = line.strip()
+#             # if clean and clean not in found:
+            
+
+#     return found[:5]  # return max 5 education entries
 def extract_education(text: str) -> list:
     degrees = [
         "b.tech", "m.tech", "btech", "mtech", "b.e", "m.e",
@@ -144,18 +165,17 @@ def extract_education(text: str) -> list:
         "hsc", "ssc", "intermediate", "matriculation"
     ]
 
-    text_lower = text.lower()
-    found = []
+    found = set()  # avoid duplicates
 
     lines = text.splitlines()
     for line in lines:
         line_lower = line.lower()
-        if any(deg in line_lower for deg in degrees):
-            clean = line.strip()
-            if clean and clean not in found:
-                found.append(clean)
 
-    return found[:5]  # return max 5 education entries
+        for deg in degrees:   # 🔥 iterate properly
+            if deg in line_lower:
+                found.add(deg)
+
+    return list(found)
 
 
 # ─── MASTER PARSER ─────────────────────────────────────────────────────────────
