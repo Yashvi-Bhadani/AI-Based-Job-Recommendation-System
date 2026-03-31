@@ -5,3 +5,8 @@ backend/.env
 
 __pycache__/
 *.pyc
+
+AI/.env
+# Model files (large files)
+AI/models/*.pkl
+AI/uploads/
