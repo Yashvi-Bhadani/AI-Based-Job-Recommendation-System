@@ -10,3 +10,4 @@ AI/.env
 # Model files (large files)
 AI/models/*.pkl
 AI/uploads/
+AI/job_descriptions.csv
