@@ -11,3 +11,4 @@ AI/.env
 AI/models/*.pkl
 AI/uploads/
 AI/job_descriptions.csv
+*.csv
