@@ -86,7 +86,30 @@ def extract_location(text: str) -> str:
     for ent in doc.ents:
         if ent.label_ == "GPE":
             return ent.text
-    return "Not Found"
+    return ""
+
+
+def parse_location_components(location_str: str) -> dict:
+    """Split a location string into city/state/country as best as possible."""
+    if not location_str or not isinstance(location_str, str):
+        return {"city": "", "state": "", "country": ""}
+
+    parts = [p.strip() for p in re.split(r"[,;/\\]", location_str) if p.strip()]
+
+    city = ""
+    state = ""
+    country = ""
+
+    if len(parts) == 1:
+        country = parts[0]
+    elif len(parts) == 2:
+        city, country = parts
+    else:
+        city = parts[0]
+        state = parts[-2]
+        country = parts[-1]
+
+    return {"city": city, "state": state, "country": country}
 
 
 # ─── SKILLS ────────────────────────────────────────────────────────────────────
@@ -96,7 +119,9 @@ def extract_skills(text: str) -> list:
 
     # Multi-word skills first
     for skill in SKILLS_DB:
-        if skill in text_lower:
+        # exact word match to avoid substring false positives like 'r' in 'your' or 'go' in 'google'
+        pattern = rf"\b{re.escape(skill)}\b"
+        if re.search(pattern, text_lower):
             found.add(skill)
 
     return sorted(list(found))
@@ -161,7 +186,7 @@ def extract_education(text: str) -> list:
     degrees = [
         "b.tech", "m.tech", "btech", "mtech", "b.e", "m.e",
         "bachelor", "master", "phd", "ph.d", "mba", "bsc", "msc",
-        "b.sc", "m.sc", "be", "me", "diploma", "10th", "12th",
+        "b.sc", "m.sc", "diploma", "10th", "12th",
         "hsc", "ssc", "intermediate", "matriculation"
     ]
 
@@ -180,11 +205,17 @@ def extract_education(text: str) -> list:
 
 # ─── MASTER PARSER ─────────────────────────────────────────────────────────────
 def extract_all(text: str) -> dict:
+    location_raw = extract_location(text)
+    location_parts = parse_location_components(location_raw)
+
     return {
         "name": extract_name(text),
         "email": extract_email(text),
         "phone": extract_phone(text),
-        "location": extract_location(text),
+        "location": location_raw,
+        "city": location_parts["city"],
+        "state": location_parts["state"],
+        "country": location_parts["country"],
         "skills": extract_skills(text),
         "years_experience": extract_experience(text),
         "education": extract_education(text),

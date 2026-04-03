@@ -1,6 +1,8 @@
 from fastapi import FastAPI, UploadFile, File
+from pydantic import BaseModel  # ✅ THIS WAS MISSING
 import os
 import uuid
+
 from parser import parse_resume
 from recommender import get_recommendations
 
@@ -9,10 +11,11 @@ app = FastAPI()
 UPLOAD_DIR = "../backend/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+
+# ─── /parse ───────────────────────────────────────────────────────────────────
 @app.post("/parse")
 async def parse_resume_api(file: UploadFile = File(...)):
     try:
-        # Use a unique name to avoid collisions
         ext = os.path.splitext(file.filename)[-1] if file.filename else ".pdf"
         safe_name = f"{uuid.uuid4().hex}{ext}"
         file_path = os.path.join(UPLOAD_DIR, safe_name)
@@ -25,6 +28,7 @@ async def parse_resume_api(file: UploadFile = File(...)):
         parsed_data = parse_resume(file_path)
 
         return {"parsedData": parsed_data}
+
     except Exception as e:
         print("PARSE ERROR:", str(e))
         return {"error": str(e)}
@@ -33,21 +37,16 @@ async def parse_resume_api(file: UploadFile = File(...)):
 # ─── /recommend ───────────────────────────────────────────────────────────────
 class RecommendRequest(BaseModel):
     parsed_resume: dict
-    page:          int = 1
-    page_size:     int = 15   # backend asks for 15; top 5 shown on upload page
- 
- 
+    # No page/page_size — new recommender handles everything internally
+
+
 @app.post("/recommend")
 async def recommend_jobs(body: RecommendRequest):
     try:
-        result = get_recommendations(
-            parsed_resume=body.parsed_resume,
-            page=body.page,
-            page_size=body.page_size,
-        )
+        # New recommender.py: get_recommendations(parsed_resume) only
+        result = get_recommendations(parsed_resume=body.parsed_resume)
         return result
- 
+
     except Exception as e:
         print("RECOMMEND ERROR:", str(e))
-        return {"error": str(e), "jobs": []}
- 
+        return {"error": str(e), "top5": [], "all_jobs": [], "by_location": {}}
