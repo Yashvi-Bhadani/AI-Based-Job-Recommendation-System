@@ -55,53 +55,55 @@ const uploadResume = async (req, res, next) => {
     });
 
     // ── STEP 3: Get job recommendations from FastAPI ──────────────────────────
-    let rankedJobs = [];
+    let top5Jobs  = [];   // from recommender: nearest + highest scored
+    let allJobs   = [];   // all 30 sorted jobs
     try {
       const recommendResponse = await axios.post(
         "http://127.0.0.1:8000/recommend",
-        { parsed_resume: parsedData, page: 1, page_size: 15 },
-        { headers: { "Content-Type": "application/json" }, timeout: 60000 }
+        { parsed_resume: parsedData },           // new signature — no page params
+        { headers: { "Content-Type": "application/json" }, timeout: 90000 }
       );
-      rankedJobs = recommendResponse.data?.jobs || [];
-      console.log(`Recommender returned ${rankedJobs.length} jobs`);
+      top5Jobs = recommendResponse.data?.top5     || [];
+      allJobs  = recommendResponse.data?.all_jobs || [];
+      console.log(`Recommender → top5: ${top5Jobs.length}, all: ${allJobs.length}`);
     } catch (recErr) {
-      // Recommendations are non-critical — log and continue
       console.error("Recommender error:", recErr.message);
+      // Non-critical — continue and return parsed data without jobs
     }
 
     // ── STEP 4: Save top 15 jobs to DB (dedup-safe) ───────────────────────────
-    const top15 = rankedJobs.slice(0, 15);
+    // all_jobs is already sorted local→country→global, take first 15
+    const toSave     = allJobs.slice(0, 15);
     const savedJobDocs = [];
 
-    for (const j of top15) {
+    for (const j of toSave) {
       try {
+        // recommender already splits location — use it directly
         const { city, state, country } = parseLocation(j.location || "");
 
-        // upsert: if same title+company+url exists, update it; else insert
         const jobDoc = await Job.findOneAndUpdate(
           { title: j.job_title, company: j.company, url: j.url || "" },
           {
             $set: {
               title:      j.job_title,
               company:    j.company,
-              url:        j.url        || "",
-              location:   j.location   || "",
-              city,
-              state,
-              country,
-              isRemote:   j.remote     || false,
-              isHybrid:   j.hybrid     || false,
-              seniority:  j.seniority  || "",
-              salary:     j.salary     || "",
+              url:        j.url         || "",
+              location:   j.location    || "",
+              city:       city          || j.state_code  || "",
+              state:      state         || "",
+              country:    country       || j.country     || "",
+              isRemote:   j.remote      || false,
+              isHybrid:   j.hybrid      || false,
+              seniority:  j.seniority   || "",
+              salary:     j.salary      || "",
               skills:     j.matched_skills || [],
-              datePosted: j.date_posted || "",
+              datePosted: j.date_posted  || "",
               status:     "Active",
             },
           },
           { upsert: true, new: true }
         );
 
-        // Junction record — one per user+job+resume
         await UserJob.findOneAndUpdate(
           { userId: req.user.id, jobId: jobDoc._id, resumeId: resume._id },
           {
@@ -120,24 +122,51 @@ const uploadResume = async (req, res, next) => {
     }
 
     // ── STEP 5: Build top 5 response ─────────────────────────────────────────
-    const top5 = savedJobDocs.slice(0, 5).map(({ jobDoc, matchScore, matchedSkills }) => ({
-      _id:           jobDoc._id,
-      title:         jobDoc.title,
-      company:       jobDoc.company,
-      location:      jobDoc.location,
-      city:          jobDoc.city,
-      state:         jobDoc.state,
-      country:       jobDoc.country,
-      isRemote:      jobDoc.isRemote,
-      isHybrid:      jobDoc.isHybrid,
-      seniority:     jobDoc.seniority,
-      salary:        jobDoc.salary,
-      skills:        jobDoc.skills,
-      url:           jobDoc.url,
-      datePosted:    jobDoc.datePosted,
-      matchScore,
-      matchedSkills,
-    }));
+    // Use recommender's top5 (already location-priority sorted), map to saved _ids
+    const savedMap = new Map(
+      savedJobDocs.map(({ jobDoc, matchScore, matchedSkills }) => [
+        `${jobDoc.title}__${jobDoc.company}`,
+        { jobDoc, matchScore, matchedSkills }
+      ])
+    );
+
+    const top5 = top5Jobs.slice(0, 5).map((j) => {
+      const saved = savedMap.get(`${j.job_title}__${j.company}`);
+      if (saved) {
+        return {
+          _id:           saved.jobDoc._id,
+          title:         saved.jobDoc.title,
+          company:       saved.jobDoc.company,
+          location:      saved.jobDoc.location,
+          city:          saved.jobDoc.city,
+          state:         saved.jobDoc.state,
+          country:       saved.jobDoc.country,
+          isRemote:      saved.jobDoc.isRemote,
+          isHybrid:      saved.jobDoc.isHybrid,
+          seniority:     saved.jobDoc.seniority,
+          salary:        saved.jobDoc.salary,
+          skills:        saved.jobDoc.skills,
+          url:           saved.jobDoc.url,
+          datePosted:    saved.jobDoc.datePosted,
+          matchScore:    saved.matchScore,
+          matchedSkills: saved.matchedSkills,
+        };
+      }
+      // Fallback: job wasn't in top 15 saved — return raw recommender data
+      return {
+        title:         j.job_title,
+        company:       j.company,
+        location:      j.location,
+        isRemote:      j.remote,
+        isHybrid:      j.hybrid,
+        seniority:     j.seniority,
+        salary:        j.salary,
+        url:           j.url,
+        datePosted:    j.date_posted,
+        matchScore:    j.match_score,
+        matchedSkills: j.matched_skills,
+      };
+    });
 
     // ── STEP 6: Respond ───────────────────────────────────────────────────────
     return res.status(201).json({

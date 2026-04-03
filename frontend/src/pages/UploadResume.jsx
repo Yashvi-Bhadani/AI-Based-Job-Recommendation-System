@@ -1,83 +1,108 @@
 import Navbar from "../components/Navbar";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { saveJobHistory } from "../utils/jobHistory";
 
-// ── Small sub-components ──────────────────────────────────────────────────────
-
-function MatchBadge({ score }) {
-  const color =
-    score >= 75 ? "bg-green-100 text-green-700" :
-    score >= 50 ? "bg-yellow-100 text-yellow-700" :
-                  "bg-gray-100 text-gray-500";
-  return (
-    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color}`}>
-      {score}% match
-    </span>
-  );
+// ── Seniority Mapping ─────────────────────────────────────────────────────────
+function formatSeniority(raw) {
+  const map = {
+    entry: "Fresher",
+    entry_level: "Fresher",
+    junior: "Fresher",
+    mid: "Mid Level",
+    mid_level: "Mid Level",
+    senior: "Senior",
+    lead: "Senior",
+    c_level: "Senior",
+    principal: "Senior",
+  };
+  return map[raw?.toLowerCase()] || null;
 }
 
+// ── Job Card ──────────────────────────────────────────────────────────────────
 function JobCard({ job }) {
-  return (
-    <div className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow bg-white">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <p className="font-semibold text-gray-800 text-sm">{job.title}</p>
-          <p className="text-xs text-gray-500">{job.company}</p>
-        </div>
-        <MatchBadge score={job.matchScore} />
-      </div>
+  const seniorityLabel = formatSeniority(job.seniority);
 
-      {/* Location row */}
-      <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
+  return (
+    <div className={`relative bg-white border rounded-xl p-4 flex flex-col gap-2 hover:shadow-md transition-shadow ${job.isApplied ? "border-l-4 border-l-green-400" : "border-gray-100"}`}>
+      {/* LINE 1: Company Name */}
+      <p className="text-base font-bold text-gray-900">{job.company}</p>
+
+      {/* LINE 2: Job Title */}
+      <p className="text-sm font-medium text-gray-700">{job.title}</p>
+
+      {/* LINE 3: Location */}
+      <p className="text-xs text-gray-500">📍 {job.location || "Remote"}</p>
+
+      {/* LINE 4: Tags Row */}
+      <div className="flex flex-wrap gap-1.5 items-center">
+        {/* Seniority Pill */}
+        {seniorityLabel && (
+          <span className="bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded-full">
+            {seniorityLabel}
+          </span>
+        )}
+
+        {/* Remote/Hybrid Pill */}
         {job.isRemote && (
-          <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">🌐 Remote</span>
+          <span className="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full">
+            🌐 Remote
+          </span>
         )}
         {job.isHybrid && (
-          <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">🏢 Hybrid</span>
+          <span className="bg-purple-50 text-purple-600 text-xs px-2 py-0.5 rounded-full">
+            🏢 Hybrid
+          </span>
         )}
-        {job.location && (
-          <span>📍 {job.location}</span>
-        )}
-        {job.seniority && (
-          <span className="capitalize">· {job.seniority}</span>
-        )}
+
+        {/* Salary Pill */}
         {job.salary && (
-          <span>· 💰 {job.salary}</span>
+          <span className="bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full">
+            💰 {job.salary}
+          </span>
         )}
       </div>
 
-      {/* Matched skills */}
+      {/* LINE 5: Matched Skills */}
       {job.matchedSkills?.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {job.matchedSkills.slice(0, 5).map((sk, i) => (
-            <span key={i} className="bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full">
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-xs text-gray-400">Matched skills:</span>
+          {job.matchedSkills.slice(0, 4).map((sk, i) => (
+            <span key={i} className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
               {sk}
             </span>
           ))}
-          {job.matchedSkills.length > 5 && (
-            <span className="text-xs text-gray-400">+{job.matchedSkills.length - 5} more</span>
+          {job.matchedSkills.length > 4 && (
+            <span className="text-xs text-gray-400">+{job.matchedSkills.length - 4} more</span>
           )}
         </div>
       )}
 
-      {/* Apply button */}
-      {job.url ? (
-        <a
-          href={job.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block text-center text-xs font-medium bg-blue-600 text-white py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Apply →
-        </a>
-      ) : (
+      {/* LINE 6: Action Buttons */}
+      <div className="flex gap-2">
+        {job.url ? (
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 text-center bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Apply →
+          </a>
+        ) : (
+          <button
+            disabled
+            className="flex-1 text-center bg-gray-100 text-gray-400 text-xs px-3 py-1.5 rounded-lg cursor-not-allowed"
+          >
+            No link
+          </button>
+        )}
         <button
-          disabled
-          className="block w-full text-center text-xs font-medium bg-gray-100 text-gray-400 py-1.5 rounded-lg cursor-not-allowed"
-        >
-          No link available
+          onClick={() => { }}
+          className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${job.isSaved ? "bg-yellow-50 border-yellow-300 text-yellow-600" : "border-gray-200 text-gray-400 hover:border-yellow-300 hover:text-yellow-500"}`}>
+          {job.isSaved ? "⭐" : "☆"}
         </button>
-      )}
+      </div>
     </div>
   );
 }
@@ -90,13 +115,13 @@ export default function UploadResume() {
     return <Navigate to="/" replace />;
   }
 
-  const [selectedFile, setSelectedFile]   = useState(null);
-  const [isUploading, setIsUploading]     = useState(false);
-  const [uploadError, setUploadError]     = useState("");
-  const [aiResult, setAiResult]           = useState(null);   // parsedData
-  const [topJobs, setTopJobs]             = useState([]);     // top 5 jobs
-  const [totalSaved, setTotalSaved]       = useState(0);
-  const [resumeId, setResumeId]           = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [aiResult, setAiResult] = useState(null);   // parsedData
+  const [topJobs, setTopJobs] = useState([]);     // top 5 jobs
+  const [totalSaved, setTotalSaved] = useState(0);
+  const [resumeId, setResumeId] = useState(null);
 
   const handleUpload = async () => {
     if (!selectedFile) {
@@ -116,9 +141,9 @@ export default function UploadResume() {
       form.append("resume", selectedFile);
 
       const resp = await fetch("http://localhost:5000/api/resume/upload", {
-        method:  "POST",
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body:    form,
+        body: form,
       });
 
       const text = await resp.text();
@@ -137,9 +162,9 @@ export default function UploadResume() {
       // Save to recent uploads list (localStorage)
       const resumes = JSON.parse(localStorage.getItem("resumes")) || [];
       resumes.push({
-        name:   selectedFile.name,
-        email:  localStorage.getItem("email") || "",
-        date:   new Date().toLocaleDateString(),
+        name: selectedFile.name,
+        email: localStorage.getItem("email") || "",
+        date: new Date().toLocaleDateString(),
         status: "Parsed",
       });
       localStorage.setItem("resumes", JSON.stringify(resumes));
@@ -149,6 +174,13 @@ export default function UploadResume() {
       setTotalSaved(data.totalSaved || 0);
       setResumeId(data.resume?._id || null);
       setSelectedFile(null);
+
+      // Save to job history
+      const resumeSnippet = `Skills: ${(data.parsedData?.skills || []).join(', ')} | Education: ${(data.parsedData?.education || []).join(', ')}`;
+      const saved = saveJobHistory(data.topJobs || [], resumeSnippet);
+      if (saved) {
+        alert("Job recommendations saved to history!");
+      }
 
     } catch (e) {
       setUploadError(e.message || "Upload failed");
@@ -288,13 +320,6 @@ export default function UploadResume() {
                   )}
                 </div>
 
-                {/* Raw text */}
-                <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-2">Raw Extracted Text</p>
-                  <div className="text-sm bg-gray-50 p-3 rounded whitespace-pre-wrap max-h-96 overflow-auto border border-gray-200">
-                    {aiResult.raw_text || "No raw text available"}
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -337,25 +362,7 @@ export default function UploadResume() {
           </div>
         )}
 
-        {/* ── Recent Uploads ────────────────────────────────────────────────── */}
-        <div className="bg-white p-6 rounded-xl shadow mt-8">
-          <h3 className="font-bold mb-4">Recent Uploads</h3>
-          {(JSON.parse(localStorage.getItem("resumes")) || []).length === 0 ? (
-            <p className="text-sm text-gray-400">No uploads yet.</p>
-          ) : (
-            (JSON.parse(localStorage.getItem("resumes")) || []).map((file, i) => (
-              <div key={i} className="flex justify-between items-center bg-gray-50 p-4 rounded mb-3">
-                <div>
-                  <p className="font-medium">📄 {file.name}</p>
-                  <p className="text-sm text-gray-500">Uploaded on {file.date}</p>
-                </div>
-                <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">
-                  {file.status}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
+
       </main>
     </div>
   );

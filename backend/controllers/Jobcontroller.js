@@ -9,21 +9,28 @@ const UserJob = require("../models/UserJob");
 // ─────────────────────────────────────────────────────────────────────────────
 const getMyJobs = async (req, res, next) => {
   try {
-    const { resumeId, groupBy = "country" } = req.query;
-
-    const filter = { userId: req.user.id };
-    if (resumeId) filter.resumeId = resumeId;
-
-    // Fetch UserJob records and populate full Job data
-    const userJobs = await UserJob.find(filter)
+    // We return jobs grouped by resume upload session (most recent first). For UI session boxes.
+    const userJobs = await UserJob.find({ userId: req.user.id })
       .populate("jobId")
       .populate("resumeId", "originalName createdAt")
-      .sort({ matchScore: -1 });
+      .sort({ createdAt: -1 });
 
-    // Flatten into a clean array
-    const jobs = userJobs
-      .filter((uj) => uj.jobId) // guard against orphaned references
-      .map((uj) => ({
+    const sessionMap = new Map();
+
+    for (const uj of userJobs) {
+      if (!uj.resumeId || !uj.jobId) continue;
+
+      const key = uj.resumeId._id.toString();
+      if (!sessionMap.has(key)) {
+        sessionMap.set(key, {
+          resumeId:   uj.resumeId._id,
+          resumeName: uj.resumeId.originalName,
+          uploadedAt: uj.resumeId.createdAt,
+          jobs:       []
+        });
+      }
+
+      sessionMap.get(key).jobs.push({
         _id:           uj.jobId._id,
         title:         uj.jobId.title,
         company:       uj.jobId.company,
@@ -43,38 +50,54 @@ const getMyJobs = async (req, res, next) => {
         matchedSkills: uj.matchedSkills,
         isSaved:       uj.isSaved,
         isApplied:     uj.isApplied,
-        resumeId:      uj.resumeId?._id,
-        resumeName:    uj.resumeId?.originalName,
-        uploadedAt:    uj.resumeId?.createdAt,
         userJobId:     uj._id,
-      }));
-
-    // Group by the requested location level
-    const validGroupKeys = ["city", "state", "country"];
-    const key = validGroupKeys.includes(groupBy) ? groupBy : "country";
-
-    const grouped = {};
-    for (const job of jobs) {
-      const groupLabel = job[key] || (job.isRemote ? "Remote" : "Unknown");
-      if (!grouped[groupLabel]) grouped[groupLabel] = [];
-      grouped[groupLabel].push(job);
+      });
     }
 
-    // Sort groups alphabetically, Remote last
-    const sortedGroups = Object.entries(grouped)
-      .sort(([a], [b]) => {
-        if (a === "Remote") return 1;
-        if (b === "Remote") return -1;
-        return a.localeCompare(b);
-      })
-      .map(([label, items]) => ({ label, count: items.length, jobs: items }));
+    let sessions = Array.from(sessionMap.values())
+      .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+
+    if (sessions.length === 0 && userJobs.length > 0) {
+      const legacyJobs = userJobs
+        .filter((uj) => uj.jobId)
+        .map((uj) => ({
+          _id: uj.jobId._id,
+          title: uj.jobId.title,
+          company: uj.jobId.company,
+          location: uj.jobId.location,
+          city: uj.jobId.city,
+          state: uj.jobId.state,
+          country: uj.jobId.country,
+          isRemote: uj.jobId.isRemote,
+          isHybrid: uj.jobId.isHybrid,
+          seniority: uj.jobId.seniority,
+          salary: uj.jobId.salary,
+          skills: uj.jobId.skills,
+          url: uj.jobId.url,
+          datePosted: uj.jobId.datePosted,
+          status: uj.jobId.status,
+          matchScore: uj.matchScore,
+          matchedSkills: uj.matchedSkills,
+          isSaved: uj.isSaved,
+          isApplied: uj.isApplied,
+          userJobId: uj._id,
+        }));
+
+      sessions = [{
+        resumeId: null,
+        resumeName: "Legacy Resume Jobs",
+        uploadedAt: new Date(),
+        jobs: legacyJobs,
+      }];
+    }
+
+    sessions = sessions.slice(0, 5);
+    const totalJobs = sessions.reduce((sum, s) => sum + s.jobs.length, 0);
 
     return res.json({
-      total:   jobs.length,
-      groupBy: key,
-      groups:  sortedGroups,
+      total: totalJobs,
+      sessions,
     });
-
   } catch (err) {
     next(err);
   }

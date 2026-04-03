@@ -62,7 +62,7 @@
 const express = require("express");
 const { protect } = require("../middleware/authMiddleware");
 const {upload }= require("../middleware/uploadMiddleware");
-const { uploadResume, getMyResumes } = require("../controllers/resumeController");
+const { uploadResume, getMyResumes, deleteResumeHistory, deleteAllResumeHistory } = require("../controllers/resumeController");
 
 const router = express.Router();
 
@@ -76,6 +76,12 @@ router.post(
 
 // Get My Resumes
 router.get("/my", protect, getMyResumes);
+
+// Delete one resume session and its user jobs
+router.delete("/:resumeId/history", protect, deleteResumeHistory);
+
+// Delete all resume sessions and user jobs for current user
+router.delete("/history", protect, deleteAllResumeHistory);
 
 module.exports = router;
 

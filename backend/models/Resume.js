@@ -19,6 +19,9 @@ const resumeSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    parsedData: {
+      type: mongoose.Schema.Types.Mixed, // Store parsed resume data
+    },
     status: {
       type: String,
       default: "Active",
