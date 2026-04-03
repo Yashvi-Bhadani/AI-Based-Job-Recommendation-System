@@ -7,10 +7,11 @@ import Dashboard from "./pages/Dashboard";
 import UploadResume from "./pages/UploadResume";
 import Jobs from "./pages/Jobs";
 import Admin from "./pages/AdminDashboard";
-import AuthCallback from "./pages/AuthCallback";
+// import AuthCallback from "./pages/AuthCallback";
 import Profile from "./pages/Profile";
 import AboutContact from "./pages/AboutContact";
 import ProtectedRoute from "./components/ProtectedRoute";
+
 
 function App() {
   return (
@@ -21,7 +22,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
+        {/* <Route path="/auth/callback" element={<AuthCallback />} /> */}
         <Route path="/about" element={<AboutContact />} />
 
         {/* USER ROUTES */}
@@ -67,6 +68,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
 
       </Routes>
     </BrowserRouter>

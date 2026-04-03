@@ -55,6 +55,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+
       <Navbar />
 
       <main className="p-8 max-w-7xl mx-auto">
@@ -65,6 +66,7 @@ export default function Dashboard() {
             <p className="text-blue-100">Ready to explore new opportunities today?</p>
           </div>
           <span className="text-sm bg-white/20 px-3 py-1 rounded">{today}</span>
+
         </div>
 
         {/* STATS */}
@@ -74,6 +76,7 @@ export default function Dashboard() {
             { title: "Job Matches", value: stats.matches, icon: "💼" },
             { title: "Profile Views", value: stats.views, icon: "📈" },
             { title: "Interview Requests", value: stats.interviews, icon: "🎯" },
+
           ].map((item, i) => (
             <div key={i} className="bg-white p-6 rounded-xl shadow">
               <div className="flex justify-between mb-3">
@@ -107,6 +110,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500 mb-3">No resume uploaded yet.</p>
             )}
 
+
             <div className="mb-4">
               <div className="flex justify-between text-sm mb-1">
                 <span>Profile Completion</span>
@@ -117,6 +121,7 @@ export default function Dashboard() {
                   className="h-2 bg-blue-600 rounded"
                   style={{ width: profileComplete ? "100%" : "50%" }}
                 ></div>
+
               </div>
             </div>
 
@@ -125,6 +130,7 @@ export default function Dashboard() {
               className="block text-center bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
             >
               {latestResume ? "Update Resume" : "Upload Resume"}
+
             </Link>
           </div>
 
@@ -153,6 +159,7 @@ export default function Dashboard() {
                 </div>
               ))
             )}
+
           </div>
         </div>
 
@@ -169,6 +176,7 @@ export default function Dashboard() {
               <div key={i} className="bg-white p-6 rounded-xl shadow">
                 <h4 className="font-semibold mb-1">💼 {job}</h4>
                 <p className="text-sm text-gray-500 mb-4">Match Score: 85%</p>
+
                 <button className="bg-blue-600 text-white px-4 py-2 rounded">
                   Apply Now
                 </button>

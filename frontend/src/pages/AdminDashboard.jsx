@@ -73,6 +73,7 @@ export default function AdminDashboard() {
     }
   };
 
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -87,6 +88,7 @@ export default function AdminDashboard() {
             { label: "Total Jobs", value: stats.totalJobs },
             { label: "Resumes Uploaded", value: stats.totalResumes },
             { label: "Total Applications", value: stats.totalApplications },
+
           ].map((stat, i) => (
             <div key={i} className="bg-white p-6 rounded-xl shadow">
               <p className="text-sm text-gray-500">{stat.label}</p>
@@ -96,6 +98,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* JOB MANAGEMENT */}
+
         <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">💼 Job Management</h2>
 
@@ -115,6 +118,7 @@ export default function AdminDashboard() {
             {formError && <p className="text-red-600 text-sm mt-2">{formError}</p>}
             {formSuccess && <p className="text-green-600 text-sm mt-2">{formSuccess}</p>}
 
+
             <button
               onClick={postJob}
               className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
@@ -130,6 +134,7 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-500">{job.company} • {job.location}</p>
               </div>
               <button onClick={() => deleteJob(job._id)} className="text-red-600 text-sm">
+
                 Delete
               </button>
             </div>
@@ -172,6 +177,7 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-500">
                 {res.userId?.name} ({res.userId?.email}) • Uploaded on{" "}
                 {new Date(res.createdAt).toLocaleDateString()}
+
               </p>
             </div>
           ))}
@@ -232,6 +238,7 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
+I
       </main>
     </div>
   );

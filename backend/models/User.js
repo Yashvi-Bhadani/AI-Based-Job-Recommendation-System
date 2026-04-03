@@ -47,4 +47,12 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// const userSchema = new mongoose.Schema({
+//   name: String,
+//   email: { type: String, unique: true },
+//   password: String,
+//   role: String,
+// });
+// >>>>>>> AI
+
 module.exports = mongoose.model("User", userSchema);

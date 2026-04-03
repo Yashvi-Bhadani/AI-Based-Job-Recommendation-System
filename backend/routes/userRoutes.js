@@ -1,4 +1,5 @@
 const express = require("express");
+
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
@@ -190,6 +191,7 @@ router.put("/profile", protect, async (req, res, next) => {
     res.json(updatedUser);
   } catch (err) {
     next(err);
+
   }
 });
 

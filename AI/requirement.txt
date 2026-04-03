@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pdfplumber
+python-docx
+scikit-learn
+joblib
+spacy
+nltk
+pandas
+numpy

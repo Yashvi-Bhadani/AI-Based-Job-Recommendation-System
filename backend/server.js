@@ -41,7 +41,7 @@ app.use(express.json());
 
 // API routes
 app.use("/api/users", userRoutes);
-app.use("/api/resumes", resumeRoutes);
+app.use("/api/resume", resumeRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/admin", adminRoutes);

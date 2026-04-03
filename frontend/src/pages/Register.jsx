@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
+
 export default function Register() {
   const navigate = useNavigate();
 
@@ -16,6 +17,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -23,6 +25,7 @@ export default function Register() {
   const handleRegister = async () => {
     setError("");
     setSuccess("");
+
 
     if (!form.name || !form.email || !form.password || !form.role) {
       setError("Please fill in all fields");
@@ -39,6 +42,7 @@ export default function Register() {
       setError("Name must be at least 2 characters");
       return;
     }
+
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match");
@@ -62,6 +66,7 @@ export default function Register() {
       setTimeout(() => navigate("/login"), 800);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to connect to server");
+
     }
   };
 
@@ -159,6 +164,7 @@ export default function Register() {
           )}
           {success && (
             <p className="text-green-600 text-sm mb-2">{success}</p>
+
           )}
 
           <button

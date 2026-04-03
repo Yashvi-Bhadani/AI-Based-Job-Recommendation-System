@@ -2,11 +2,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import api from "../api/axios";
 
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
 
   const navigate = useNavigate();
 
@@ -15,10 +17,12 @@ export default function Login() {
 
     if (loading) return;
 
+
     if (!email || !password) {
       setError("Please fill in all fields");
       return;
     }
+
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -51,6 +55,7 @@ export default function Login() {
       }
     } finally {
       setLoading(false);
+
     }
   };
 
@@ -139,6 +144,7 @@ export default function Login() {
             className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-60"
           >
             {loading ? "Logging in..." : "Login"}
+
           </button>
 
           {/* Register */}

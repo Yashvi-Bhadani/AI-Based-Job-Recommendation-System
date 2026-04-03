@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+
 import api from "../api/axios";
+
 
 export default function Navbar() {
   const location = useLocation();
@@ -24,6 +26,9 @@ export default function Navbar() {
       setInitials("JD");
     }
   }, [location.pathname]);
+
+
+
 
   const linkStyle = (path) =>
     location.pathname === path
@@ -52,9 +57,11 @@ export default function Navbar() {
           <Link to="/jobs" className={linkStyle("/jobs")}>
             Jobs
           </Link>
+
           <Link to="/about" className={linkStyle("/about")}>
             About Us
           </Link>
+ 
         </nav>
       )}
 
@@ -69,6 +76,7 @@ export default function Navbar() {
             <Link to="/login" className="text-sm text-gray-600 hover:text-blue-600">
               Login
             </Link>
+
             <Link
               to="/register"
               className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700"
@@ -77,6 +85,7 @@ export default function Navbar() {
             </Link>
           </>
         )}
+
 
         {isLoggedIn && (
           <>
@@ -113,12 +122,14 @@ export default function Navbar() {
                     onClick={async () => {
                       try { await api.post("/api/users/logout"); } catch {}
                       localStorage.clear();
+
                       setIsLoggedIn(false);
                       setShowMenu(false);
                       navigate("/");
                     }}
                   >
                     🚪 Logout
+
                   </button>
                 </div>
               )}

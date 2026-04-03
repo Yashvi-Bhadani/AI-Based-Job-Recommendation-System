@@ -1,4 +1,15 @@
-// Intentionally left empty for now to avoid unsafe exports.
-// User-related logic is implemented directly in routes/userRoutes.js.
 
-module.exports = {};
+const User = require("../models/User");
+
+// Placeholder for user controller logic
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getUsers };
+

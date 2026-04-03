@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -22,3 +23,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+=======
+backend/.env
+*.mp4
+*.pdf
+*.pptx
+
+__pycache__/
+*.pyc
+
+AI/.env
+# Model files (large files)
+AI/models/*.pkl
+AI/uploads/
+AI/job_descriptions.csv
+*.csv
+>>>>>>> AI
