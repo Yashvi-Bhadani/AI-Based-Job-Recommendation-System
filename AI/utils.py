@@ -128,36 +128,45 @@ def extract_skills(text: str) -> list:
 
 
 # ─── YEARS OF EXPERIENCE ───────────────────────────────────────────────────────
-def extract_experience(text: str) -> float:
+def extract_years_experience(text: str) -> int:
     """
     Looks for patterns like:
-    - "3 years of experience"
-    - "2+ years"
-    - "five years"
-    Returns the highest number found (most relevant for senior roles).
+    - "2 years of experience"
+    - "3+ years"
+    - "fresher" / "fresh graduate" → 0
+    - "entry level" → 0
+    - finds graduation year → current_year - grad_year
     """
-    word_to_num = {
-        "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-        "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10
-    }
-
     text_lower = text.lower()
-    numbers_found = []
 
-    # Pattern: "3 years" or "3+ years"
-    for match in re.finditer(r"(\d+\.?\d*)\+?\s*years?", text_lower):
-        numbers_found.append(float(match.group(1)))
+    # Explicit fresher signals
+    if any(w in text_lower for w in 
+           ["fresher", "fresh graduate", "recent graduate", 
+            "no experience", "entry level", "0 years"]):
+        return 0
 
-    # Pattern: "three years"
-    for word, num in word_to_num.items():
-        if re.search(rf"\b{word}\s+years?\b", text_lower):
-            numbers_found.append(float(num))
+    # Pattern: "X years" or "X+ years"
+    matches = re.findall(
+        r'(\d+)\s*\+?\s*years?\s*(?:of\s*)?'
+        r'(?:experience|exp|work)',
+        text_lower
+    )
+    if matches:
+        return max(int(m) for m in matches)
 
-    if not numbers_found:
-        return 0.0
+    # Pattern: graduation year → infer experience
+    grad_matches = re.findall(
+        r'(?:class of|batch of|graduated|passout)\s*(\d{4})',
+        text_lower
+    )
+    if grad_matches:
+        from datetime import datetime
+        grad_year = max(int(y) for y in grad_matches)
+        current_year = datetime.now().year
+        inferred = max(0, current_year - grad_year)
+        return min(inferred, 30)  # cap at 30
 
-    # Return max (most representative of total experience)
-    return max(numbers_found)
+    return 0  # default: treat as fresher if unknown
 
 
 # ─── EDUCATION ─────────────────────────────────────────────────────────────────
@@ -217,6 +226,6 @@ def extract_all(text: str) -> dict:
         "state": location_parts["state"],
         "country": location_parts["country"],
         "skills": extract_skills(text),
-        "years_experience": extract_experience(text),
+        "years_experience": extract_years_experience(text),
         "education": extract_education(text),
     }

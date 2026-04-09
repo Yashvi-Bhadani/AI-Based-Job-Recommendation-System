@@ -71,6 +71,12 @@ function JobCard({ job, onToggleSave = () => { }, onMarkApplied = () => { } }) {
                 </div>
             )}
 
+            {job.reason && (
+                <p className="text-xs text-gray-400 italic mt-1">
+                    ✦ {job.reason}
+                </p>
+            )}
+
             <div className="flex gap-2 pt-1">
                 {job.url ? (
                     <a

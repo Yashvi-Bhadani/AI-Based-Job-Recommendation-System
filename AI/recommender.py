@@ -168,11 +168,12 @@ def get_search_titles(predicted_role: str) -> list:
 
 
 # ─── STEP 2: FETCH JOBS FROM THEIRSTACK ───────────────────────────────────────
-def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str = "") -> list:
+def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str = "", years_exp: int = 0) -> list:
     """
     Fetch 4 jobs per title → up to 12 raw jobs total.
     Deduplicates by job ID and title+company combination.
     Uses optional country filter from resume location.
+    Adds seniority filter based on years of experience.
     """
     if not THEIRSTACK_KEY:
         print("THEIRSTACK_KEY not set. Skipping TheirStack and using fallback jobs.")
@@ -188,6 +189,16 @@ def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str 
     seen_ids    = set()
     seen_titles = set()
 
+    # Map years_exp to TheirStack seniority values
+    seniority_filter = None
+    if years_exp is not None:
+        if years_exp <= 1:
+            seniority_filter = ["entry", "entry_level", "junior"]
+        elif years_exp <= 4:
+            seniority_filter = ["mid", "mid_level", "entry_level"]
+        else:
+            seniority_filter = ["senior", "mid_level", "lead"]
+
     for title in search_titles:
         try:
             payload = {
@@ -195,6 +206,9 @@ def fetch_jobs(search_titles: list, limit_per_title: int = 4, country_code: str 
                 "posted_at_max_age_days":  30,
                 "limit":                   limit_per_title,
             }
+
+            if seniority_filter:
+                payload["seniority"] = seniority_filter
 
             if country_code:
                 payload["job_country_code_or"] = [country_code]
@@ -251,9 +265,10 @@ def build_job_text(job: dict) -> str:
 def score_jobs(parsed_resume: dict, jobs: list) -> list:
     """
     Score each job:
-    - 70% semantic similarity (sentence transformers)
-    - 20% explicit skill overlap bonus
-    - 10% seniority match bonus
+    - 65% semantic similarity (sentence transformers)
+    - skill overlap bonus
+    - seniority match bonus/penalty
+    - skill gap penalty
     """
     if not jobs:
         return []
@@ -279,17 +294,56 @@ def score_jobs(parsed_resume: dict, jobs: list) -> list:
             overlap        = len(resume_skills & all_job_skills)
             skill_bonus    = min(overlap * 0.02, 0.20)
 
-            # Seniority match bonus (max 0.10)
-            seniority       = job.get("seniority", "").lower()
-            seniority_bonus = 0.0
-            if years_exp <= 1 and seniority in ["entry", "entry_level"]:
-                seniority_bonus = 0.10
-            elif 2 <= years_exp <= 4 and seniority in ["mid", "mid_level"]:
-                seniority_bonus = 0.10
-            elif years_exp >= 5 and seniority in ["senior", "c_level"]:
-                seniority_bonus = 0.10
+            # Seniority match bonus/penalty
+            def seniority_score(years_exp, job_seniority):
+                s = (job_seniority or "").lower()
+                
+                if years_exp <= 1:          # Fresher
+                    if s in ["entry", "entry_level", "junior"]:
+                        return +0.20        # strong boost
+                    elif s in ["mid", "mid_level"]:
+                        return -0.10        # soft penalty
+                    elif s in ["senior", "lead", "c_level"]:
+                        return -0.30        # hard penalty — pushes to bottom
+                    return 0.0
 
-            final_score = (sem_score * 0.70) + skill_bonus + seniority_bonus
+                elif years_exp <= 4:        # Mid-level
+                    if s in ["mid", "mid_level"]:
+                        return +0.20
+                    elif s in ["entry", "entry_level"]:
+                        return -0.05
+                    elif s in ["senior", "lead"]:
+                        return +0.05        # stretch — slight boost ok
+                    return 0.0
+
+                else:                       # Senior
+                    if s in ["senior", "lead", "c_level", "principal"]:
+                        return +0.20
+                    elif s in ["mid", "mid_level"]:
+                        return -0.05
+                    elif s in ["entry", "entry_level"]:
+                        return -0.20
+                    return 0.0
+
+            sen_score = seniority_score(years_exp, job.get("seniority", ""))
+
+            # Skill gap penalty
+            gap_skills = all_job_skills - resume_skills
+            gap_ratio  = len(gap_skills) / max(len(all_job_skills), 1)
+            gap_penalty = min(gap_ratio * 0.15, 0.10)
+
+            final_score = (sem_score * 0.65) + skill_bonus + sen_score - gap_penalty
+
+            # Build reason string
+            reasons = []
+            matched_skills = resume_skills & all_job_skills
+            if matched_skills:
+                top = list(matched_skills)[:3]
+                reasons.append(f"Matches your skills: {', '.join(top)}")
+            if sen_score > 0:
+                reasons.append("Good fit for your experience level")
+            if job.get("remote"):
+                reasons.append("Remote position")
 
             scored.append({
                 # Job details
@@ -313,6 +367,7 @@ def score_jobs(parsed_resume: dict, jobs: list) -> list:
                 # Scoring
                 "match_score":    round(final_score * 100, 1),
                 "matched_skills": list(resume_skills & all_job_skills),
+                "reason":         reasons[0] if reasons else "Based on your profile",
             })
 
         except Exception as e:
@@ -434,6 +489,7 @@ def get_recommendations(parsed_resume: dict) -> dict:
     candidate_state = parsed_resume.get("state", "")
     candidate_country = parsed_resume.get("country", "")
     candidate_location = parsed_resume.get("location", "")
+    years_exp = parsed_resume.get("years_experience", 0)
 
     # Build the best location string for sorting and fallback search
     if not candidate_location:
@@ -446,7 +502,12 @@ def get_recommendations(parsed_resume: dict) -> dict:
         or extract_country_code(candidate_location)
     )
 
-    raw_jobs = fetch_jobs(search_titles, limit_per_title=4, country_code=candidate_country_code)
+    raw_jobs = fetch_jobs(search_titles, limit_per_title=4, country_code=candidate_country_code, years_exp=years_exp)
+
+    # Fallback: if no jobs found with filter, try without
+    if len(raw_jobs) == 0:
+        print("No jobs found with seniority filter, retrying without...")
+        raw_jobs = fetch_jobs(search_titles, limit_per_title=4, country_code=candidate_country_code, years_exp=None)
 
     if not raw_jobs:
         # if API key is missing/invalid, fallback to synthetic job list
