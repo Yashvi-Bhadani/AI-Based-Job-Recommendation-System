@@ -32,6 +32,7 @@ const uploadResume = async (req, res, next) => {
     );
 
     const parsedData = response.data?.parsedData || response.data || {};
+    const resumeScore = response.data?.resumeScore || {};
 
     // ✅ FIX 2: Save in MongoDB
     const resume = await Resume.create({
@@ -40,6 +41,7 @@ const uploadResume = async (req, res, next) => {
       filePath: req.file.path,
       originalName: req.file.originalname,
       parsedData,
+      resumeScore,
       status: "Active",
     });
 
@@ -65,11 +67,12 @@ const uploadResume = async (req, res, next) => {
       }
     );
 
-    const { top5, all_jobs } = recommendResponse.data;
-    console.log("STEP 3 ✅ top5:", top5.length, "all_jobs:", all_jobs.length);
+    const { top5, all_jobs, skill_suggestions } = recommendResponse.data;
+    console.log("STEP 3 ✅ top5:", top5.length, "all_jobs:", all_jobs.length, "skill_suggestions:", !!skill_suggestions);
 
     // STEP 4: Save jobs to MongoDB
     let savedCount = 0;
+    console.log("💾 SAVING JOBS TO DATABASE:");
     for (let i = 0; i < Math.min(all_jobs.length, 10); i++) {
       const jobData = all_jobs[i];
 
@@ -111,16 +114,26 @@ const uploadResume = async (req, res, next) => {
         { upsert: true, new: true }
       );
 
+      console.log(`  Job ${i + 1}: ${jobData.title || jobData.job_title} at ${jobData.company} - Match Score: ${jobData.match_score}%`);
+
       savedCount++;
     }
 
     console.log("STEP 4 ✅ Saved", savedCount, "jobs");
 
     // STEP 5: Return response
+    const topJobsToReturn = top5.slice(0, 5);
+    console.log("📊 TOP 5 JOB RECOMMENDATIONS:");
+    topJobsToReturn.forEach((job, index) => {
+      console.log(`  ${index + 1}. ${job.title || job.job_title} at ${job.company} - Match Score: ${job.match_score}%`);
+    });
+
     res.status(201).json({
       message: "Resume uploaded, parsed, and jobs recommended successfully",
       parsedData: parsedData,
-      topJobs: top5.slice(0, 5),
+      resumeScore,
+      topJobs: topJobsToReturn,
+      skillSuggestions: skill_suggestions || {},
       totalSaved: savedCount,
     });
 

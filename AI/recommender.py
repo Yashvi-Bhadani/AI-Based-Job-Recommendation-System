@@ -6,6 +6,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from model import predict_role
+from skill_suggestions import get_skill_suggestions
 
 # ─── LOAD ENV ──────────────────────────────────────────────────────────────────
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
@@ -261,6 +262,10 @@ def build_job_text(job: dict) -> str:
     return f"{title} {skills} {keywords} {snippet}".strip()
 
 
+def _normalize_skill(skill: str) -> str:
+    return str(skill or "").strip().lower()
+
+
 # ─── STEP 4: SCORE JOBS ───────────────────────────────────────────────────────
 def score_jobs(parsed_resume: dict, jobs: list) -> list:
     """
@@ -288,8 +293,8 @@ def score_jobs(parsed_resume: dict, jobs: list) -> list:
             sem_score = float(cosine_similarity(resume_vec, job_vec)[0][0])
 
             # Skill overlap bonus (max 0.20)
-            job_skills     = set(job.get("technology_slugs", []))
-            job_keywords   = set(job.get("keyword_slugs", []))
+            job_skills     = set(_normalize_skill(s) for s in job.get("technology_slugs", []))
+            job_keywords   = set(_normalize_skill(s) for s in job.get("keyword_slugs", []))
             all_job_skills = job_skills | job_keywords
             overlap        = len(resume_skills & all_job_skills)
             skill_bonus    = min(overlap * 0.02, 0.20)
@@ -345,12 +350,51 @@ def score_jobs(parsed_resume: dict, jobs: list) -> list:
             if job.get("remote"):
                 reasons.append("Remote position")
 
+            explanation = {
+                "reason": "Based on your profile",
+                "highlights": [],
+                "breakdown": {
+                    "skill_match": int(round(min(len(matched_skills) / max(len(all_job_skills), 1), 1) * 100)),
+                    "profile_fit": int(round(min(max(sem_score, 0.0), 1.0) * 100)),
+                    "level_fit": int(round(max(0.0, min(1.0, (sen_score + 0.3) / 0.5)) * 100)),
+                },
+                "matched_skills": list(matched_skills),
+                "missing_skills": [],
+            }
+
+            if matched_skills:
+                reason_text = f"Your skills in {', '.join(list(matched_skills)[:3])} make this role a strong match."
+                explanation["reason"] = reason_text
+                explanation["highlights"].append(f"{len(matched_skills)} skills matched")
+            else:
+                explanation["reason"] = "This role matches your profile and recommended path."
+
+            if sen_score >= 0.15:
+                explanation["highlights"].append("Good fit for your level")
+            elif sen_score >= 0:
+                explanation["highlights"].append("Reasonable seniority fit")
+            else:
+                explanation["highlights"].append("Opportunity to grow into this role")
+
+            if job.get("remote"):
+                explanation["highlights"].append("Remote friendly")
+            elif job.get("hybrid"):
+                explanation["highlights"].append("Hybrid option available")
+
+            if len(explanation["highlights"]) > 3:
+                explanation["highlights"] = explanation["highlights"][:3]
+
+            ordered_missing = []
+            for candidate in list(job.get("technology_slugs", [])) + list(job.get("keyword_slugs", [])):
+                if candidate and candidate not in matched_skills and _normalize_skill(candidate) not in {s.lower() for s in ordered_missing}:
+                    ordered_missing.append(candidate)
+            explanation["missing_skills"] = ordered_missing[:5]
+
             scored.append({
                 # Job details
                 "job_id":         job.get("id"),
                 "job_title":      job.get("job_title", ""),
                 "title":          job.get("job_title") or job.get("title") or "",
-                "job_title":      job.get("job_title") or job.get("title") or "",
                 "company":        job.get("company", ""),
                 "location":       job.get("short_location") or job.get("location") or "Remote",
                 "country":        job.get("country", ""),
@@ -366,8 +410,11 @@ def score_jobs(parsed_resume: dict, jobs: list) -> list:
                 "company_logo":   (job.get("company_object") or {}).get("logo", ""),
                 # Scoring
                 "match_score":    round(final_score * 100, 1),
-                "matched_skills": list(resume_skills & all_job_skills),
-                "reason":         reasons[0] if reasons else "Based on your profile",
+                "matched_skills": list(matched_skills),
+                "matchedSkills":  list(matched_skills),
+                "missing_skills": explanation["missing_skills"],
+                "reason":         explanation["reason"],
+                "explanation":    explanation,
             })
 
         except Exception as e:
@@ -480,6 +527,8 @@ def get_recommendations(parsed_resume: dict) -> dict:
     confidence     = role_result["confidence"]
     print(f"Predicted role: {predicted_role} ({confidence}%)")
 
+    resume_skills = set(s.lower() for s in parsed_resume.get("skills", []))
+
     # Step 2 — get related job titles for this role
     search_titles = get_search_titles(predicted_role)
     print(f"Search titles: {search_titles}")
@@ -559,6 +608,16 @@ def get_recommendations(parsed_resume: dict) -> dict:
         location_buckets["global"]
     )
 
+    missing_skills_set = set()
+    for job in scored_jobs:
+        missing_skills_set.update(job.get("missing_skills", []))
+
+    skill_suggestions = get_skill_suggestions(
+        missing_skills=list(missing_skills_set),
+        predicted_role=predicted_role,
+        resume_skills=list(resume_skills),
+    )
+
     return {
         "predicted_role": predicted_role,
         "confidence":     confidence,
@@ -566,4 +625,5 @@ def get_recommendations(parsed_resume: dict) -> dict:
         "top5":           top5,
         "all_jobs":       all_jobs_sorted,
         "by_location":    location_buckets,
+        "skill_suggestions": skill_suggestions,
     }

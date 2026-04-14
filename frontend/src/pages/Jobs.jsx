@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import JobCard from "../components/JobCard";
+import api from "../api/axios";
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Jobs() {
@@ -20,13 +21,8 @@ export default function Jobs() {
     setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
-      const resp = await fetch("http://localhost:5000/api/jobs/my", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Failed to load job sessions");
-
+      const resp = await api.get("/api/jobs/my");
+      const data = resp.data;
       setSessions(data.sessions || []);
       setTotalJobs(data.total || 0);
       if ((data.sessions || []).length > 0) {
@@ -51,13 +47,9 @@ export default function Jobs() {
     if (!window.confirm("Delete this upload session and all its jobs?")) return;
     setDeleting(resumeId);
     try {
-      const token = localStorage.getItem("token");
-      const resp = await fetch(`http://localhost:5000/api/resume/${resumeId}/history`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Failed to delete session");
+      const resp = await api.delete(`/api/resume/${resumeId}/history`);
+      const data = resp.data;
+      if (!resp) throw new Error(data.error || "Failed to delete session");
 
       const removedCount = sessions.find((s) => s.resumeId === resumeId)?.jobs.length || 0;
       setSessions((prev) => prev.filter((s) => s.resumeId !== resumeId));
@@ -85,13 +77,9 @@ export default function Jobs() {
               onClick={async () => {
                 if (!window.confirm("Clear ALL upload history? This cannot be undone.")) return;
                 try {
-                  const token = localStorage.getItem("token");
-                  const resp = await fetch("http://localhost:5000/api/resume/history", {
-                    method: "DELETE",
-                    headers: { Authorization: `Bearer ${token}` },
-                  });
-                  const data = await resp.json();
-                  if (!resp.ok) throw new Error(data.error || "Failed to clear history");
+                  const resp = await api.delete("/api/resume/history");
+                  const data = resp.data;
+                  if (!resp) throw new Error(data.error || "Failed to clear history");
 
                   setSessions([]);
                   setTotalJobs(0);
@@ -169,11 +157,8 @@ export default function Jobs() {
                             key={job.userJobId || job._id}
                             job={job}
                             onToggleSave={(id) => {
-                              const token = localStorage.getItem("token");
-                              fetch(`http://localhost:5000/api/jobs/${id}/save`, {
-                                method: "PATCH",
-                                headers: { Authorization: `Bearer ${token}` },
-                              }).then((resp) => resp.json()).then((data) => {
+                              api.patch(`/api/jobs/${id}/save`).then((resp) => {
+                                const data = resp.data;
                                 setSessions((prev) => prev.map((s) => {
                                   if (s.resumeId !== session.resumeId) return s;
                                   return {
@@ -186,17 +171,26 @@ export default function Jobs() {
                               }).catch(console.error);
                             }}
                             onMarkApplied={(id) => {
-                              const token = localStorage.getItem("token");
-                              fetch(`http://localhost:5000/api/jobs/${id}/apply`, {
-                                method: "PATCH",
-                                headers: { Authorization: `Bearer ${token}` },
-                              }).then(() => {
+                              api.patch(`/api/jobs/${id}/apply`).then(() => {
                                 setSessions((prev) => prev.map((s) => {
                                   if (s.resumeId !== session.resumeId) return s;
                                   return {
                                     ...s,
                                     jobs: s.jobs.map((j) =>
                                       j.userJobId === id ? { ...j, isApplied: true } : j
+                                    ),
+                                  };
+                                }));
+                              }).catch(console.error);
+                            }}
+                            onUnmarkApplied={(id) => {
+                              api.patch(`/api/jobs/${id}/unapply`).then(() => {
+                                setSessions((prev) => prev.map((s) => {
+                                  if (s.resumeId !== session.resumeId) return s;
+                                  return {
+                                    ...s,
+                                    jobs: s.jobs.map((j) =>
+                                      j.userJobId === id ? { ...j, isApplied: false } : j
                                     ),
                                   };
                                 }));

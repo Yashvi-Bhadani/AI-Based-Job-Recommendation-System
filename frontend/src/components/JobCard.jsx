@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 function formatSeniority(raw) {
     const map = {
@@ -15,10 +15,23 @@ function formatSeniority(raw) {
     return map[raw?.toLowerCase()] || null;
 }
 
-function JobCard({ job, onToggleSave = () => { }, onMarkApplied = () => { } }) {
+function JobCard({ job, onToggleSave = () => { }, onMarkApplied = () => { }, onUnmarkApplied = () => { } }) {
+    const [isExpanded, setIsExpanded] = useState(false);
     const seniorityLabel = formatSeniority(job.seniority);
     const jobTitle = job.title || job.job_title || "Untitled Position";
     const location = job.location || job.city || "Remote";
+    const explanation = job.explanation || {
+        reason: job.reason,
+        highlights: [],
+        breakdown: {},
+    };
+
+    const breakdown = explanation.breakdown || {};
+    const scoreValues = {
+        skill_match: Number(breakdown.skill_match ?? breakdown.skillMatch ?? 0),
+        profile_fit: Number(breakdown.profile_fit ?? breakdown.profileFit ?? 0),
+        level_fit: Number(breakdown.level_fit ?? breakdown.levelFit ?? 0),
+    };
 
     return (
         <div className={`relative bg-white border rounded-xl p-4 flex flex-col gap-2 hover:shadow-md transition-shadow ${job.isApplied ? "border-l-4 border-l-green-400" : "border-gray-100"}`}>
@@ -71,10 +84,50 @@ function JobCard({ job, onToggleSave = () => { }, onMarkApplied = () => { } }) {
                 </div>
             )}
 
-            {job.reason && (
+            {explanation.reason && (
                 <p className="text-xs text-gray-400 italic mt-1">
-                    ✦ {job.reason}
+                    ✦ {explanation.reason}
                 </p>
+            )}
+
+            {explanation.highlights?.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                    {explanation.highlights.slice(0, 3).map((highlight, index) => (
+                        <span key={index} className="bg-slate-100 text-slate-700 text-[10px] px-2 py-1 rounded-full">
+                            {highlight}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            <button
+                onClick={() => setIsExpanded((prev) => !prev)}
+                className="text-left text-xs text-blue-600 hover:text-blue-800 mt-2"
+            >
+                {isExpanded ? "Hide why this job" : "Why this job?"}
+            </button>
+
+            {isExpanded && (
+                <div className="space-y-2 pt-2">
+                    {[
+                        { label: "Skill Match", value: scoreValues.skill_match },
+                        { label: "Profile Fit", value: scoreValues.profile_fit },
+                        { label: "Level Fit", value: scoreValues.level_fit },
+                    ].map((item) => {
+                        const clampedValue = Math.max(0, Math.min(100, item.value || 0));
+                        return (
+                            <div key={item.label} className="space-y-1">
+                                <div className="flex items-center justify-between text-[10px] uppercase text-gray-500">
+                                    <span>{item.label}</span>
+                                    <span>{clampedValue}%</span>
+                                </div>
+                                <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                                    <div className="h-full bg-blue-500" style={{ width: `${clampedValue}%` }} />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             )}
 
             <div className="flex gap-2 pt-1">
@@ -106,6 +159,30 @@ function JobCard({ job, onToggleSave = () => { }, onMarkApplied = () => { } }) {
                     title={job.isSaved ? "Unsave" : "Save"}
                 >
                     {job.isSaved ? "⭐" : "☆"}
+                </button>
+            </div>
+
+            {/* Applied/Not Applied Buttons */}
+            <div className="flex gap-2 pt-2 border-t border-gray-100 mt-2">
+                <button
+                    onClick={() => onMarkApplied(job.userJobId)}
+                    className={`flex-1 text-center text-xs px-3 py-2 rounded-lg transition-colors ${job.isApplied
+                            ? "bg-green-100 border border-green-300 text-green-700 cursor-not-allowed"
+                            : "bg-white border border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-400"
+                        }`}
+                    disabled={job.isApplied}
+                >
+                    ✓ Applied
+                </button>
+                <button
+                    onClick={() => onUnmarkApplied(job.userJobId)}
+                    className={`flex-1 text-center text-xs px-3 py-2 rounded-lg transition-colors ${!job.isApplied
+                            ? "bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed"
+                            : "bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-400"
+                        }`}
+                    disabled={!job.isApplied}
+                >
+                    ✗ Not Applied
                 </button>
             </div>
         </div>

@@ -1,6 +1,6 @@
 const express = require("express");
 const { protect } = require("../middleware/authMiddleware");
-const { getMyJobs, toggleSave, markApplied } = require("../controllers/Jobcontroller");
+const { getMyJobs, toggleSave, markApplied, unmarkApplied } = require("../controllers/Jobcontroller");
 
 const router = express.Router();
 
@@ -13,6 +13,9 @@ router.patch("/:userJobId/save", protect, toggleSave);
 
 // Mark as applied
 router.patch("/:userJobId/apply", protect, markApplied);
+
+// Unmark as applied
+router.patch("/:userJobId/unapply", protect, unmarkApplied);
 
 module.exports = router;
 

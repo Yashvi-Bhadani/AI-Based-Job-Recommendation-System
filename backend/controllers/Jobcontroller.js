@@ -131,4 +131,16 @@ const markApplied = async (req, res, next) => {
   }
 };
 
-module.exports = { getMyJobs, toggleSave, markApplied };
+const unmarkApplied = async (req, res, next) => {
+  try {
+    const uj = await UserJob.findOne({ _id: req.params.userJobId, userId: req.user.id });
+    if (!uj) return res.status(404).json({ error: "Not found" });
+    uj.isApplied = false;
+    await uj.save();
+    res.json({ isApplied: false });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getMyJobs, toggleSave, markApplied, unmarkApplied };
